@@ -1,0 +1,47 @@
+{
+  "name": "better-auth",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "lint": "eslint .",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "prepare": "nuxt prepare"
+  },
+  "dependencies": {
+    "@better-auth/api-key": "1.6.16",
+    "@better-auth/core": "1.6.16",
+    "@better-auth/oauth-provider": "1.6.16",
+    "@casl/ability": "^7.0.0",
+    "@libsql/client-wasm": "^0.17.3",
+    "@nuxt/eslint": "1.16.0",
+    "@nuxthub/core": "^0.10.7",
+    "@onmax/nuxt-better-auth": "0.0.2-alpha.32",
+    "better-auth": "1.6.16",
+    "es-toolkit": "^1.47.1",
+    "nanoid": "^5.1.11",
+    "nuxt": "^4.4.8",
+    "nuxt-resend": "^0.0.2",
+    "nuxt-security": "^2.6.0",
+    "vue": "^3.5.35",
+    "vue-router": "^5.1.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^9.0.0",
+    "@libsql/client": "^0.17.3",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
+    "eslint": "^10.4.1",
+    "eslint-plugin-import-lite": "^0.6.0",
+    "eslint-plugin-perfectionist": "^5.9.0",
+    "eslint-plugin-pnpm": "^1.6.1",
+    "eslint-plugin-unicorn": "^65.0.1",
+    "jsonc-eslint-parser": "^3.1.0",
+    "tailwindcss": "^4.3.0",
+    "wrangler": "^4.99.0",
+    "yaml-eslint-parser": "^2.0.0"
+  }
+}

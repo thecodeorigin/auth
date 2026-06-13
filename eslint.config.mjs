@@ -1,0 +1,100 @@
+import antfu from '@antfu/eslint-config'
+// import pluginPnpm from 'eslint-plugin-pnpm'
+// import * as jsoncParser from 'jsonc-eslint-parser'
+// import * as yamlParser from 'yaml-eslint-parser'
+import withNuxt from './.nuxt/eslint.config.mjs'
+
+export default withNuxt(
+  antfu({
+    stylistic: true,
+    imports: true,
+    pnpm: true,
+    typescript: true,
+    vue: true,
+  }),
+  {
+    files: ['**/*.md'],
+    rules: {
+      'markdown/no-multiple-h1': 'off',
+    },
+  },
+  {
+    // Virtual files ESLint creates for each fenced code block inside markdown.
+    // Snippets are documentation, not real modules — relax rules that require
+    // a proper module context (imports, declared vars, consistent returns, etc.)
+    files: ['**/*.md/**'],
+    rules: {
+      'no-undef': 'off',
+      'no-unused-expressions': 'off',
+      'import/no-unresolved': 'off',
+      'ts/no-unused-vars': 'off',
+      'ts/no-require-imports': 'off',
+      'unused-imports/no-unused-vars': 'off',
+      'unused-imports/no-unused-imports': 'off',
+      'antfu/no-top-level-await': 'off',
+      'vue/attribute-hyphenation': 'off',
+    },
+  },
+  {
+    // <Can I="..."> is @casl/vue's DSL — uppercase I is intentional.
+    files: ['**/*.vue'],
+    rules: {
+      'vue/attribute-hyphenation': ['warn', 'always', { ignore: ['I'] }],
+    },
+  },
+  {
+    ignores: ['node_modules', '.nuxt', '.agents', '.agent', '.claude', '.data', '.wrangler', '.output', 'dist', 'server/db/migrations', 'examples'],
+  },
+  // {
+  //   name: 'pnpm/package.json',
+  //   files: [
+  //     'package.json',
+  //     '**/package.json',
+  //   ],
+  //   languageOptions: {
+  //     parser: jsoncParser,
+  //   },
+  //   plugins: {
+  //     pnpm: pluginPnpm,
+  //   },
+  //   rules: {
+  //     'pnpm/json-enforce-catalog': 'error',
+  //     'pnpm/json-valid-catalog': 'error',
+  //     'pnpm/json-prefer-workspace-settings': 'error',
+  //   },
+  // },
+  // {
+  //   name: 'pnpm/pnpm-workspace-yaml',
+  //   files: ['pnpm-workspace.yaml'],
+  //   languageOptions: {
+  //     parser: yamlParser,
+  //   },
+  //   plugins: {
+  //     pnpm: pluginPnpm,
+  //   },
+  //   rules: {
+  //     'pnpm/yaml-no-unused-catalog-item': 'error',
+  //     'pnpm/yaml-no-duplicate-catalog-item': 'error',
+  //     'pnpm/yaml-valid-packages': 'error',
+  //   },
+  // },
+  {
+    rules: {
+      'e18e/prefer-static-regex': 'off',
+      'ts/no-explicit-any': 'off',
+      'style/eol-last': 'off',
+      'ts/prefer-literal-enum-member': 'off',
+      'ts/no-dynamic-delete': 'off',
+      'ts/unified-signatures': 'off',
+      'ts/no-use-before-define': 'off',
+      // 'ts/no-deprecated': 'error',
+      'comma-dangle': ['error', 'always-multiline'],
+      'no-alert': 'off',
+      'no-console': 'off',
+      'node/prefer-global/buffer': 'off',
+      'node/prefer-global/process': 'off',
+      'style/brace-style': 'off',
+      'vue/no-multiple-template-root': 'off',
+    },
+  },
+)
