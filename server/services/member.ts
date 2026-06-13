@@ -25,6 +25,10 @@ interface Row { organizationId: string, role: string, createdAt: Date | null, pe
  * then deterministic tiebreak: personal org first → oldest createdAt → organizationId.
  * This makes an explicit App-A grant win deterministically (fixes SEC-01 + the C-2 leak path).
  *
+ * TODO(auth-hub phase 4.5, deferred): when the user has >1 eligible org for the requesting
+ * client, support an `organization_id` authorize param to force the org instead of the
+ * deterministic tier-pick (open question #1). Until then, this tiering is the behavior.
+ *
  * v1 emits the role NAME in `roles`; the RP derives abilities from the static #shared/permissions
  * statement. Dynamic-role (organizationRole.permission) resolution is deferred (must be org-scoped).
  */

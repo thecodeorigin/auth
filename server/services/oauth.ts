@@ -96,6 +96,24 @@ export async function getOAuthClient(adapter: OAuthClientAdapter, clientId: stri
   }
 }
 
+export interface OAuthClientListItem {
+  clientId: string
+  name: string | null
+  disabled: boolean
+}
+
+export async function listOAuthClients(): Promise<OAuthClientListItem[]> {
+  try {
+    const rows = await db.all<{ clientId: string, name: string | null, disabled: number | null }>(
+      sql`select "clientId", "name", "disabled" from "oauthClient" order by "name"`,
+    )
+    return rows.map(row => ({ clientId: row.clientId, name: row.name, disabled: Boolean(row.disabled) }))
+  }
+  catch {
+    return []
+  }
+}
+
 function parseStringArray(raw: string): string[] {
   let value: unknown = raw
   for (let depth = 0; depth < 3 && typeof value === 'string'; depth++) {

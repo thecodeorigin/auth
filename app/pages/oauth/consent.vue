@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// TODO(auth-hub phase 4.4, deferred): fetch the client's registered name via
+// GET /api/auth/oauth2/clients/:id and show it + human-readable scope descriptions
+// instead of the raw client_id.
 const route = useRoute()
 const error = ref('')
 const submitting = ref(false)
