@@ -5,7 +5,7 @@ import { admin as adminPlugin, jwt, openAPI, organization } from 'better-auth/pl
 import { ac, roles } from '#shared/permissions'
 import { getAuthorizationClaims } from './services/member'
 import { getClientOrigins } from './services/oauth'
-import { ensurePersonalOrgIfVerified, grantAllAppsScope } from './services/organization'
+import { ensurePersonalOrgIfVerified, grantAllAppsScope, removeMemberAppScopes, removeOrgAppScopes } from './services/organization'
 import { sendEmail } from './utils/email'
 
 export default defineServerAuth(({ runtimeConfig }) => {
@@ -108,6 +108,23 @@ export default defineServerAuth(({ runtimeConfig }) => {
             }
             catch (error) {
               console.error('[auth] grantAllAppsScope (afterCreateOrganization) failed', org.id, error)
+            }
+          },
+          // D1 has no FK cascade — explicitly clean up memberAppScope rows (AC6).
+          afterRemoveMember: async ({ member: removed, organization: org }) => {
+            try {
+              await removeMemberAppScopes(org.id, removed.userId)
+            }
+            catch (error) {
+              console.error('[auth] removeMemberAppScopes (afterRemoveMember) failed', org.id, removed.userId, error)
+            }
+          },
+          beforeDeleteOrganization: async ({ organization: org }) => {
+            try {
+              await removeOrgAppScopes(org.id)
+            }
+            catch (error) {
+              console.error('[auth] removeOrgAppScopes (beforeDeleteOrganization) failed', org.id, error)
             }
           },
         },

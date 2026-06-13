@@ -1,6 +1,3 @@
-import { db } from '@nuxthub/db'
-import { memberAppScope } from '@nuxthub/db/schema'
-
 const ORG_B = { id: 'org-b', name: 'Org B', slug: 'org-b' }
 
 /**
@@ -49,15 +46,8 @@ export default defineTask({
     await removeMemberAppScopes(org.id, alice.id)
 
     // tier-0 exact grant: alice may reach Express RP — and ONLY Express RP — inside Org B.
-    // role:null → inherit the member's base role ('viewer'). Custom table → Drizzle direct.
-    await db.insert(memberAppScope).values({
-      id: `mas-${org.id}-${alice.id}-${express.clientId}`,
-      organizationId: org.id,
-      userId: alice.id,
-      clientId: express.clientId,
-      role: null,
-      createdAt: now,
-    }).onConflictDoNothing({ target: memberAppScope.id })
+    // role:null → inherit the member's base role ('viewer'). Goes through the Phase-3 service.
+    await setMemberAppScope({ organizationId: org.id, userId: alice.id, clientId: express.clientId, role: null })
 
     return {
       result: 'ok',

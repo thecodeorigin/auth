@@ -78,3 +78,8 @@ export async function removeMemberAppScopes(organizationId: string, userId: stri
     and(eq(memberAppScope.organizationId, organizationId), eq(memberAppScope.userId, userId)),
   )
 }
+
+/** D1 does NOT enforce FK cascade — drop ALL of an org's scope rows when the org is deleted (H-2). */
+export async function removeOrgAppScopes(organizationId: string): Promise<void> {
+  await db.delete(memberAppScope).where(eq(memberAppScope.organizationId, organizationId))
+}
