@@ -12,18 +12,7 @@ const ORIGIN = new URL(IDP).origin
 const EMAIL = process.env.EMAIL || 'alice@seed.local'
 const PASSWORD = process.env.PASSWORD || 'Passw0rd!'
 
-function loadClientsJson() {
-  if (process.env.NUXT_OIDC_CLIENTS)
-    return process.env.NUXT_OIDC_CLIENTS
-  for (const line of readFileSync(new URL('../.env', import.meta.url), 'utf8').split('\n')) {
-    const m = line.match(/^NUXT_OIDC_CLIENTS=(.*)$/)
-    if (m)
-      return m[1]
-  }
-  return '[]'
-}
-
-const CLIENTS = JSON.parse(loadClientsJson()).map(c => ({
+const CLIENTS = JSON.parse(readFileSync(new URL('./.clients.json', import.meta.url), 'utf8')).map(c => ({
   id: c.clientId,
   secret: c.clientSecret ?? null,
   redirect: c.redirectUris[0],
@@ -84,6 +73,7 @@ async function exchange(c, code, verifier, { omitVerifier = false } = {}) {
 }
 
 let pass = 0
+let firstIdTokenClaims = null
 for (const c of CLIENTS) {
   const { code, verifier } = await authorize(c)
   const t = await exchange(c, code, verifier)
@@ -91,9 +81,17 @@ for (const c of CLIENTS) {
     throw new Error(`token exchange failed for ${c.id}: ${t.status} ${t.body}`)
   const idt = JSON.parse(t.body).id_token
   const alg = JSON.parse(Buffer.from(idt.split('.')[0], 'base64url').toString()).alg
+  if (!firstIdTokenClaims)
+    firstIdTokenClaims = JSON.parse(Buffer.from(idt.split('.')[1], 'base64url').toString())
   console.log(`  ✓ ${c.id.padEnd(12)} ${c.public ? '(public/PKCE)' : '(confidential)'} → code+token issued, id_token alg=${alg}, NO re-login`)
   pass++
 }
+
+// Phase-1 probe: the seeded clients must carry metadata.clientId so the id_token hook can scope claims.
+// (Hard assertion of the hook payload — org/roles scoped to the requesting client — is added in
+// examples/authz-proof.mjs in Phase 2.) For now, soft-check the issuer produced a well-formed id_token.
+if (!firstIdTokenClaims?.sub)
+  throw new Error(`PHASE-1 PROBE FAIL: id_token missing 'sub' claim: ${JSON.stringify(firstIdTokenClaims)}`)
 
 // Public-client PKCE enforcement: vue-spa without code_verifier must be rejected.
 const spa = CLIENTS.find(c => c.public)

@@ -1,34 +1,15 @@
 import { apiKey } from '@better-auth/api-key'
 import { oauthProvider } from '@better-auth/oauth-provider'
-import { db } from '@nuxthub/db'
 import { defineServerAuth } from '@onmax/nuxt-better-auth/config'
-import { admin as adminPlugin, jwt, organization } from 'better-auth/plugins'
-import { sql } from 'drizzle-orm'
+import { admin as adminPlugin, jwt, openAPI, organization } from 'better-auth/plugins'
 import { ac, roles } from '#shared/permissions'
+import { getAuthorizationClaims } from './services/member'
+import { getClientOrigins } from './services/oauth'
+import { ensurePersonalOrgIfVerified, grantAllAppsScope } from './services/organization'
 import { sendEmail } from './utils/email'
-import { hashClientSecret, parseOidcClients } from './utils/oidc'
-
-interface AuthorizationClaims {
-  org: string | null
-  roles: string | null
-}
-
-async function getAuthorizationClaims(userId: string): Promise<AuthorizationClaims> {
-  try {
-    const rows = await db.all<{ org: string | null, roles: string | null }>(
-      sql`select "organizationId" as "org", "role" as "roles" from "member" where "userId" = ${userId} limit 1`,
-    )
-    const row = rows[0]
-    return { org: row?.org ?? null, roles: row?.roles ?? null }
-  }
-  catch {
-    return { org: null, roles: null }
-  }
-}
 
 export default defineServerAuth(({ runtimeConfig }) => {
   const baseURL = runtimeConfig.public?.siteUrl || 'http://localhost:3000'
-  const clients = parseOidcClients(runtimeConfig.oidcClients)
 
   return {
     emailAndPassword: {
@@ -63,12 +44,25 @@ export default defineServerAuth(({ runtimeConfig }) => {
         clientSecret: runtimeConfig.githubClientSecret,
       },
     },
-    trustedOrigins: [
-      'http://localhost:3001',
-      'http://localhost:3002',
-      'http://localhost:3003',
-      'http://localhost:3004',
-    ],
+
+    trustedOrigins: getClientOrigins,
+
+    databaseHooks: {
+      session: {
+        create: {
+          // Fires when a verified user establishes a session = "first verified sign-in".
+          after: async (session) => {
+            // never block sign-in
+            try {
+              await ensurePersonalOrgIfVerified(session.userId)
+            }
+            catch (error) {
+              console.error('[auth] ensurePersonalOrg failed', session.userId, error)
+            }
+          },
+        },
+      },
+    },
 
     plugins: [
       jwt({
@@ -78,13 +72,7 @@ export default defineServerAuth(({ runtimeConfig }) => {
       oauthProvider({
         loginPage: '/sign-in',
         consentPage: '/oauth/consent',
-        cachedTrustedClients: new Set(clients.map(client => client.clientId)),
-        storeClientSecret: {
-          hash: hashClientSecret,
-          async verify(secret, stored) {
-            return (await hashClientSecret(secret)) === stored
-          },
-        },
+        storeClientSecret: 'hashed',
         async customIdTokenClaims({ user }) {
           return getAuthorizationClaims(user.id)
         },
@@ -105,10 +93,22 @@ export default defineServerAuth(({ runtimeConfig }) => {
           enabled: true,
           maximumRolesPerOrganization: 10,
         },
+        // default-closed: the creator of ANY org (custom orgs via organization.create) gets all-apps access.
+        organizationHooks: {
+          afterCreateOrganization: async ({ organization: org, user }) => {
+            try {
+              await grantAllAppsScope(org.id, user.id)
+            }
+            catch (error) {
+              console.error('[auth] grantAllAppsScope (afterCreateOrganization) failed', org.id, error)
+            }
+          },
+        },
       }),
       apiKey({
         enableSessionForAPIKeys: true,
       }),
+      openAPI(),
     ],
   }
 })
