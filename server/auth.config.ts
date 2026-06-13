@@ -73,11 +73,18 @@ export default defineServerAuth(({ runtimeConfig }) => {
         loginPage: '/sign-in',
         consentPage: '/oauth/consent',
         storeClientSecret: 'hashed',
-        async customIdTokenClaims({ user }) {
-          return getAuthorizationClaims(user.id)
+        // id_token hook gets `metadata` (parsed oauthClient.metadata), NOT client_id.
+        async customIdTokenClaims({ user, metadata }) {
+          const clientId = (metadata as { clientId?: string } | undefined)?.clientId ?? null
+          if (!clientId)
+            console.warn('[auth] id_token: client has no metadata.clientId — emitting unscoped claims', user.id)
+          return getAuthorizationClaims(user.id, clientId)
         },
-        async customUserInfoClaims({ user }) {
-          return getAuthorizationClaims(user.id)
+        // userinfo hook gets the validated access-token payload; azp = requesting client.
+        async customUserInfoClaims({ user, jwt }) {
+          const clientId = (jwt as { azp?: string, client_id?: string } | undefined)?.azp
+            ?? (jwt as { client_id?: string } | undefined)?.client_id ?? null
+          return getAuthorizationClaims(user.id, clientId)
         },
       }),
       adminPlugin({
