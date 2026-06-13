@@ -65,11 +65,10 @@ export async function claimsResolve(userId: string, clientId?: string | null): P
       }
       // DEFAULT-CLOSED: no exact and no '*' row for this org => no access to this app here.
     }
-    if (!candidates.length)
-      return empty
-
     candidates.sort((a, b) => a.tier - b.tier || byActive(a.row, b.row))
     const chosen = candidates[0]
+    if (!chosen)
+      return empty
     return { org: chosen.row.organizationId, roles: chosen.role, personal: chosen.row.personal }
   }
   catch (error) {
