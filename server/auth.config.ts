@@ -1,7 +1,9 @@
 import { apiKey } from '@better-auth/api-key'
 import { oauthProvider } from '@better-auth/oauth-provider'
+import { db } from '@nuxthub/db'
 import { defineServerAuth } from '@onmax/nuxt-better-auth/config'
 import { admin as adminPlugin, jwt, organization } from 'better-auth/plugins'
+import { sql } from 'drizzle-orm'
 import { ac, roles } from '#shared/permissions'
 import { sendEmail } from './utils/email'
 import { hashClientSecret, parseOidcClients } from './utils/oidc'
@@ -13,10 +15,6 @@ interface AuthorizationClaims {
 
 async function getAuthorizationClaims(userId: string): Promise<AuthorizationClaims> {
   try {
-    const [{ db }, { sql }] = await Promise.all([
-      import('@nuxthub/db'),
-      import('drizzle-orm'),
-    ])
     const rows = await db.all<{ org: string | null, roles: string | null }>(
       sql`select "organizationId" as "org", "role" as "roles" from "member" where "userId" = ${userId} limit 1`,
     )
@@ -32,17 +30,11 @@ export default defineServerAuth(({ runtimeConfig }) => {
   const baseURL = runtimeConfig.public?.siteUrl || 'http://localhost:3000'
   const clients = parseOidcClients(runtimeConfig.oidcClients)
 
-  const socialProviders: Record<string, { clientId: string, clientSecret: string }> = {}
-  if (runtimeConfig.googleClientId && runtimeConfig.googleClientSecret)
-    socialProviders.google = { clientId: runtimeConfig.googleClientId, clientSecret: runtimeConfig.googleClientSecret }
-  if (runtimeConfig.githubClientId && runtimeConfig.githubClientSecret)
-    socialProviders.github = { clientId: runtimeConfig.githubClientId, clientSecret: runtimeConfig.githubClientSecret }
-
   return {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
-      sendResetPassword: async ({ user, url }) => {
+      async sendResetPassword({ user, url }) {
         await sendEmail({
           to: user.email,
           subject: 'Reset your password',
@@ -53,7 +45,7 @@ export default defineServerAuth(({ runtimeConfig }) => {
     emailVerification: {
       sendOnSignUp: true,
       autoSignInAfterVerification: true,
-      sendVerificationEmail: async ({ user, url }) => {
+      async sendVerificationEmail({ user, url }) {
         await sendEmail({
           to: user.email,
           subject: 'Verify your email',
@@ -61,7 +53,16 @@ export default defineServerAuth(({ runtimeConfig }) => {
         })
       },
     },
-    ...(Object.keys(socialProviders).length ? { socialProviders } : {}),
+    socialProviders: {
+      google: {
+        clientId: runtimeConfig.googleClientId,
+        clientSecret: runtimeConfig.googleClientSecret,
+      },
+      github: {
+        clientId: runtimeConfig.githubClientId,
+        clientSecret: runtimeConfig.githubClientSecret,
+      },
+    },
     trustedOrigins: [
       'http://localhost:3001',
       'http://localhost:3002',
@@ -80,19 +81,30 @@ export default defineServerAuth(({ runtimeConfig }) => {
         cachedTrustedClients: new Set(clients.map(client => client.clientId)),
         storeClientSecret: {
           hash: hashClientSecret,
-          verify: async (secret, stored) => (await hashClientSecret(secret)) === stored,
+          async verify(secret, stored) {
+            return (await hashClientSecret(secret)) === stored
+          },
         },
-        customIdTokenClaims: async ({ user }) => getAuthorizationClaims(user.id),
-        customUserInfoClaims: async ({ user }) => getAuthorizationClaims(user.id),
+        async customIdTokenClaims({ user }) {
+          return getAuthorizationClaims(user.id)
+        },
+        async customUserInfoClaims({ user }) {
+          return getAuthorizationClaims(user.id)
+        },
       }),
       adminPlugin({
-        adminUserIds: runtimeConfig.adminUserIds ? runtimeConfig.adminUserIds.split(',').filter(Boolean) : [],
+        adminUserIds: runtimeConfig.adminUserIds
+          ? runtimeConfig.adminUserIds.split(',').filter(Boolean)
+          : [],
         impersonationSessionDuration: 60 * 30,
       }),
       organization({
         ac,
         roles,
-        dynamicAccessControl: { enabled: true, maximumRolesPerOrganization: 10 },
+        dynamicAccessControl: {
+          enabled: true,
+          maximumRolesPerOrganization: 10,
+        },
       }),
       apiKey({
         enableSessionForAPIKeys: true,
