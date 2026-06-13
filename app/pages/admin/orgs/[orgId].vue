@@ -45,7 +45,7 @@ async function loadClients() {
 async function selectMember(userId: string) {
   error.value = ''
   selectedUserId.value = userId
-  scopes.value = await $fetch<ScopeRow[]>(`/api/orgs/${orgId.value}/members/${userId}/app-scopes`).catch((e) => {
+  scopes.value = await $fetch<ScopeRow[]>(`/api/orgs/${orgId.value}/members/${userId}/access`).catch((e) => {
     error.value = e?.data?.statusMessage ?? 'Failed to load scopes'
     return []
   })
@@ -56,7 +56,7 @@ async function grant() {
     return
   error.value = ''
   try {
-    await $fetch(`/api/orgs/${orgId.value}/members/${selectedUserId.value}/app-scopes`, {
+    await $fetch(`/api/orgs/${orgId.value}/members/${selectedUserId.value}/access`, {
       method: 'POST',
       body: { clientId: grantClientId.value, role: grantRole.value.trim() || undefined },
     })
@@ -72,7 +72,7 @@ async function revoke(clientId: string) {
     return
   error.value = ''
   try {
-    await $fetch(`/api/orgs/${orgId.value}/members/${selectedUserId.value}/app-scopes/${encodeURIComponent(clientId)}`, { method: 'DELETE' })
+    await $fetch(`/api/orgs/${orgId.value}/members/${selectedUserId.value}/access/${encodeURIComponent(clientId)}`, { method: 'DELETE' })
     await selectMember(selectedUserId.value)
   }
   catch (e: unknown) {

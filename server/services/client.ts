@@ -5,12 +5,12 @@ import { randomToken } from '../utils/nanoid'
 
 type WhereValue = string | number | boolean | string[] | number[] | Date | null
 
-export interface OAuthClientAdapter {
+export interface ClientAdapter {
   create: (input: { model: string, data: Record<string, unknown> }) => Promise<unknown>
   findOne: <T>(input: { model: string, where: Array<{ field: string, value: WhereValue }> }) => Promise<T | null>
 }
 
-export interface CreateOAuthClientInput {
+export interface ClientCreateInput {
   name: string
   redirectUris: string[]
   type?: 'web' | 'native' | 'user-agent-based'
@@ -18,7 +18,7 @@ export interface CreateOAuthClientInput {
   skipConsent?: boolean
 }
 
-export interface CreatedOAuthClient {
+export interface ClientCreateResult {
   clientId: string
   clientSecret: string | null
   name: string
@@ -27,7 +27,7 @@ export interface CreatedOAuthClient {
   skipConsent: boolean
 }
 
-export interface PublicOAuthClient {
+export interface ClientView {
   clientId: string
   name: string | null
   type: string | null
@@ -38,7 +38,13 @@ export interface PublicOAuthClient {
   createdAt: Date | null
 }
 
-export async function createOAuthClient(adapter: OAuthClientAdapter, input: CreateOAuthClientInput): Promise<CreatedOAuthClient> {
+export interface ClientListItem {
+  clientId: string
+  name: string | null
+  disabled: boolean
+}
+
+export async function clientCreate(adapter: ClientAdapter, input: ClientCreateInput): Promise<ClientCreateResult> {
   const isPublic = input.public ?? false
   const clientId = randomToken(24)
   const clientSecret = isPublic ? null : randomToken(48)
@@ -60,7 +66,7 @@ export async function createOAuthClient(adapter: OAuthClientAdapter, input: Crea
       grantTypes: ['authorization_code', 'refresh_token'],
       responseTypes: ['code'],
       disabled: false,
-      metadata: { clientId }, // ← id_token hook receives metadata, NOT client_id; round-trips via parseClientMetadata
+      metadata: { clientId }, // ← id_token hook reads metadata.clientId; DO NOT remove
       createdAt: now,
       updatedAt: now,
     },
@@ -76,8 +82,8 @@ export async function createOAuthClient(adapter: OAuthClientAdapter, input: Crea
   }
 }
 
-export async function getOAuthClient(adapter: OAuthClientAdapter, clientId: string): Promise<PublicOAuthClient | null> {
-  const client = await adapter.findOne<PublicOAuthClient>({
+export async function clientGet(adapter: ClientAdapter, clientId: string): Promise<ClientView | null> {
+  const client = await adapter.findOne<ClientView>({
     model: 'oauthClient',
     where: [{ field: 'clientId', value: clientId }],
   })
@@ -96,13 +102,7 @@ export async function getOAuthClient(adapter: OAuthClientAdapter, clientId: stri
   }
 }
 
-export interface OAuthClientListItem {
-  clientId: string
-  name: string | null
-  disabled: boolean
-}
-
-export async function listOAuthClients(): Promise<OAuthClientListItem[]> {
+export async function clientList(): Promise<ClientListItem[]> {
   try {
     const rows = await db.all<{ clientId: string, name: string | null, disabled: number | null }>(
       sql`select "clientId", "name", "disabled" from "oauthClient" order by "name"`,
@@ -136,7 +136,7 @@ function toOrigin(uri: string): string | null {
   }
 }
 
-export async function getClientOrigins(): Promise<string[]> {
+export async function clientListOrigins(): Promise<string[]> {
   try {
     const rows = await db.all<{ redirectUris: string }>(
       sql`select "redirectUris" from "oauthClient" where "disabled" = 0`,

@@ -15,5 +15,5 @@ export default defineEventHandler(async (event) => {
   const auth = serverAuth(event)
   const ctx = await auth.$context
 
-  return createOAuthClient(ctx.adapter, body)
+  return clientCreate(ctx.adapter, body)
 })

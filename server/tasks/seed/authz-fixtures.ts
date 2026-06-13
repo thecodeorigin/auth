@@ -3,7 +3,7 @@ const ORG_B = { id: 'org-b', name: 'Org B', slug: 'org-b' }
 /**
  * Phase-2 authorization regression fixtures (AC3/AC4). Idempotent.
  * Creates a SECOND org with alice as a `viewer` member, scoped to the Express RP client ONLY
- * (a tier-0 exact memberAppScope grant). Org B is created via the adapter directly — NOT the org
+ * (a tier-0 exact access grant). Org B is created via the adapter directly — NOT the org
  * plugin — so it does NOT receive an afterCreateOrganization '*' grant. This is what proves
  * default-closed per-app selection: Express RP → Org B (viewer); any other client → personal org.
  */
@@ -43,11 +43,11 @@ export default defineTask({
 
     // Reseeding seed:idp recreates clients with NEW clientIds, orphaning prior scope rows.
     // Clear alice's Org B scopes so the ONLY grant is the current Express RP client (deterministic).
-    await removeMemberAppScopes(org.id, alice.id)
+    await accessClearMember(org.id, alice.id)
 
     // tier-0 exact grant: alice may reach Express RP — and ONLY Express RP — inside Org B.
     // role:null → inherit the member's base role ('viewer'). Goes through the Phase-3 service.
-    await setMemberAppScope({ organizationId: org.id, userId: alice.id, clientId: express.clientId, role: null })
+    await accessSet({ organizationId: org.id, userId: alice.id, clientId: express.clientId, role: null })
 
     return {
       result: 'ok',

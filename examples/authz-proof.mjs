@@ -2,7 +2,7 @@
 // REQUESTING application, selected deterministically by grant-quality tiering (fixes SEC-01).
 //
 // Fixture (seed:authz-fixtures): alice is a `viewer` in Org B, scoped to the Express RP client
-// ONLY (a tier-0 exact memberAppScope grant). Her auto-provisioned personal org holds a '*' grant.
+// ONLY (a tier-0 exact access grant). Her auto-provisioned personal org holds a '*' grant.
 //
 //   Express RP flow  → org = Org B,        roles = viewer   (tier-0 exact beats personal '*')
 //   Vue SPA flow     → org = personal org, (Org B excluded: no Vue row, default-closed)

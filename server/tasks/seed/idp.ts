@@ -84,7 +84,7 @@ export default defineTask({
       const existing = await adapter.findOne<{ clientId: string }>({ model: 'oauthClient', where: [{ field: 'name', value: demo.name }] })
       if (existing)
         await adapter.delete({ model: 'oauthClient', where: [{ field: 'clientId', value: existing.clientId }] })
-      seededClients.push(await createOAuthClient(adapter, {
+      seededClients.push(await clientCreate(adapter, {
         name: demo.name,
         redirectUris: demo.redirectUris,
         public: demo.public,

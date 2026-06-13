@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
 
   const auth = serverAuth(event)
   const ctx = await auth.$context
-  const client = await getOAuthClient(ctx.adapter, clientId)
+  const client = await clientGet(ctx.adapter, clientId)
 
   if (!client)
     throw createError({ statusCode: 404, statusMessage: 'Client not found' })

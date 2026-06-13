@@ -1,7 +1,7 @@
 import { db } from '@nuxthub/db'
-import { parseOrgMeta } from './organization'
+import { orgParseMeta } from './org'
 
-export interface AuthorizationClaims {
+export interface Claims {
   // Per-app projection emitted into id_token / userinfo. Backward-compatible keys (org, roles).
   org: string | null
   roles: string | null
@@ -17,23 +17,14 @@ interface Row { organizationId: string, role: string, createdAt: Date | null, pe
  * @param userId the user whose authorization context to resolve.
  * @param clientId the oauthClient.clientId of the requesting app, or undefined when no app context.
  *
- * DEFAULT-CLOSED (open question #3): access requires an explicit memberAppScope row.
- * Selection (clientId provided): among orgs that GRANT access to clientId, tier by grant quality
- *   tier 0: an exact memberAppScope row for clientId
- *   tier 1: a '*' (all-apps) memberAppScope row
- *   (no tier 2 — an org with no matching row is NOT a candidate; the user has no access there)
- * then deterministic tiebreak: personal org first → oldest createdAt → organizationId.
- * This makes an explicit App-A grant win deterministically (fixes SEC-01 + the C-2 leak path).
+ * DEFAULT-CLOSED: access requires an explicit `access` row. Among orgs that GRANT the client,
+ * tier by grant quality — tier 0: exact-client row; tier 1: '*' row — then deterministic tiebreak:
+ * personal org → oldest createdAt → organizationId.
  *
- * TODO(auth-hub phase 4.5, deferred): when the user has >1 eligible org for the requesting
- * client, support an `organization_id` authorize param to force the org instead of the
- * deterministic tier-pick (open question #1). Until then, this tiering is the behavior.
- *
- * v1 emits the role NAME in `roles`; the RP derives abilities from the static #shared/permissions
- * statement. Dynamic-role (organizationRole.permission) resolution is deferred (must be org-scoped).
+ * TODO(auth-hub phase 4.5, deferred): support an `organization_id` authorize param to force the org.
  */
-export async function getAuthorizationClaims(userId: string, clientId?: string | null): Promise<AuthorizationClaims> {
-  const empty: AuthorizationClaims = { org: null, roles: null, personal: false }
+export async function claimsResolve(userId: string, clientId?: string | null): Promise<Claims> {
+  const empty: Claims = { org: null, roles: null, personal: false }
   try {
     const memberships = await db.query.member.findMany({
       where: (m, { eq }) => eq(m.userId, userId),
@@ -42,7 +33,7 @@ export async function getAuthorizationClaims(userId: string, clientId?: string |
     if (!memberships.length)
       return empty
 
-    const scopes = await db.query.memberAppScope.findMany({
+    const grants = await db.query.access.findMany({
       where: (s, { eq }) => eq(s.userId, userId),
     })
 
@@ -50,10 +41,9 @@ export async function getAuthorizationClaims(userId: string, clientId?: string |
       organizationId: m.organizationId,
       role: m.role,
       createdAt: m.createdAt ?? null,
-      personal: parseOrgMeta(m.organization?.metadata).personal === true,
+      personal: orgParseMeta(m.organization?.metadata).personal === true,
     }))
 
-    // No app context: deterministic active org only.
     if (!clientId) {
       const pick = [...rows].sort(byActive)[0]
       return pick ? { org: pick.organizationId, roles: pick.role, personal: pick.personal } : empty
@@ -62,19 +52,18 @@ export async function getAuthorizationClaims(userId: string, clientId?: string |
     interface Cand { row: Row, role: string, tier: 0 | 1 }
     const candidates: Cand[] = []
     for (const row of rows) {
-      const orgScopes = scopes.filter(s => s.organizationId === row.organizationId)
-      const exact = orgScopes.find(s => s.clientId === clientId)
+      const orgGrants = grants.filter(s => s.organizationId === row.organizationId)
+      const exact = orgGrants.find(s => s.clientId === clientId)
       if (exact) {
         candidates.push({ row, role: exact.role ?? row.role, tier: 0 })
         continue
       }
-      const star = orgScopes.find(s => s.clientId === STAR)
+      const star = orgGrants.find(s => s.clientId === STAR)
       if (star) {
         candidates.push({ row, role: star.role ?? row.role, tier: 1 })
         continue
       }
-      // DEFAULT-CLOSED: no exact and no '*' row for this org => the user has NO access to this app
-      // in this org. Not a candidate. (A member with zero scope rows is denied everywhere.)
+      // DEFAULT-CLOSED: no exact and no '*' row for this org => no access to this app here.
     }
     if (!candidates.length)
       return empty
@@ -84,7 +73,7 @@ export async function getAuthorizationClaims(userId: string, clientId?: string |
     return { org: chosen.row.organizationId, roles: chosen.role, personal: chosen.row.personal }
   }
   catch (error) {
-    console.error('[auth] getAuthorizationClaims failed', userId, clientId, error)
+    console.error('[auth] claimsResolve failed', userId, clientId, error)
     return empty
   }
 }

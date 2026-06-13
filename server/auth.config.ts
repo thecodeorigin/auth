@@ -3,9 +3,10 @@ import { oauthProvider } from '@better-auth/oauth-provider'
 import { defineServerAuth } from '@onmax/nuxt-better-auth/config'
 import { admin as adminPlugin, jwt, openAPI, organization } from 'better-auth/plugins'
 import { ac, roles } from '#shared/permissions'
-import { getAuthorizationClaims } from './services/member'
-import { getClientOrigins } from './services/oauth'
-import { ensurePersonalOrgIfVerified, grantAllAppsScope, removeMemberAppScopes, removeOrgAppScopes } from './services/organization'
+import { accessClearMember, accessClearOrg, accessGrantAll } from './services/access'
+import { claimsResolve } from './services/claims'
+import { clientListOrigins } from './services/client'
+import { orgEnsurePersonal } from './services/org'
 import { sendEmail } from './utils/email'
 
 export default defineServerAuth(({ runtimeConfig }) => {
@@ -45,7 +46,7 @@ export default defineServerAuth(({ runtimeConfig }) => {
       },
     },
 
-    trustedOrigins: getClientOrigins,
+    trustedOrigins: clientListOrigins,
 
     databaseHooks: {
       session: {
@@ -54,7 +55,7 @@ export default defineServerAuth(({ runtimeConfig }) => {
           after: async (session) => {
             // never block sign-in
             try {
-              await ensurePersonalOrgIfVerified(session.userId)
+              await orgEnsurePersonal(session.userId)
             }
             catch (error) {
               console.error('[auth] ensurePersonalOrg failed', session.userId, error)
@@ -78,13 +79,13 @@ export default defineServerAuth(({ runtimeConfig }) => {
           const clientId = (metadata as { clientId?: string } | undefined)?.clientId ?? null
           if (!clientId)
             console.warn('[auth] id_token: client has no metadata.clientId — emitting unscoped claims', user.id)
-          return getAuthorizationClaims(user.id, clientId)
+          return claimsResolve(user.id, clientId)
         },
         // userinfo hook gets the validated access-token payload; azp = requesting client.
         async customUserInfoClaims({ user, jwt }) {
           const clientId = (jwt as { azp?: string, client_id?: string } | undefined)?.azp
             ?? (jwt as { client_id?: string } | undefined)?.client_id ?? null
-          return getAuthorizationClaims(user.id, clientId)
+          return claimsResolve(user.id, clientId)
         },
       }),
       adminPlugin({
@@ -104,27 +105,27 @@ export default defineServerAuth(({ runtimeConfig }) => {
         organizationHooks: {
           afterCreateOrganization: async ({ organization: org, user }) => {
             try {
-              await grantAllAppsScope(org.id, user.id)
+              await accessGrantAll(org.id, user.id)
             }
             catch (error) {
-              console.error('[auth] grantAllAppsScope (afterCreateOrganization) failed', org.id, error)
+              console.error('[auth] accessGrantAll (afterCreateOrganization) failed', org.id, error)
             }
           },
-          // D1 has no FK cascade — explicitly clean up memberAppScope rows (AC6).
+          // D1 has no FK cascade — explicitly clean up access rows (AC6).
           afterRemoveMember: async ({ member: removed, organization: org }) => {
             try {
-              await removeMemberAppScopes(org.id, removed.userId)
+              await accessClearMember(org.id, removed.userId)
             }
             catch (error) {
-              console.error('[auth] removeMemberAppScopes (afterRemoveMember) failed', org.id, removed.userId, error)
+              console.error('[auth] accessClearMember (afterRemoveMember) failed', org.id, removed.userId, error)
             }
           },
           beforeDeleteOrganization: async ({ organization: org }) => {
             try {
-              await removeOrgAppScopes(org.id)
+              await accessClearOrg(org.id)
             }
             catch (error) {
-              console.error('[auth] removeOrgAppScopes (beforeDeleteOrganization) failed', org.id, error)
+              console.error('[auth] accessClearOrg (beforeDeleteOrganization) failed', org.id, error)
             }
           },
         },
