@@ -17,6 +17,9 @@ export default defineNuxtConfig({
 
   nitro: {
     cloudflare: { nodeCompat: true },
+    imports: {
+      dirs: ['server/services'],
+    },
     experimental: {
       tasks: true,
     },
@@ -62,8 +65,7 @@ export default defineNuxtConfig({
       tokensPerInterval: 150,
       interval: 300000,
       headers: false,
-      driver: { name: 'lruCache' },
-      whiteList: ['127.0.0.1', '::1', 'localhost'],
+      driver: { name: 'cloudflare-r2-binding' },
       throwError: true,
     },
     xssValidator: {
@@ -73,7 +75,6 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    oidcClients: '',
     emailFrom: 'auth@thecodeorigin.com',
     googleClientId: '',
     googleClientSecret: '',
@@ -91,6 +92,12 @@ export default defineNuxtConfig({
     devtools: { enabled: true },
     hub: {
       db: 'sqlite',
+    },
+    security: {
+      rateLimiter: {
+        driver: { name: 'lruCache' },
+        whiteList: ['127.0.0.1', '::1', 'localhost'],
+      },
     },
   },
 

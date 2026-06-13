@@ -1,5 +1,3 @@
-import { hashClientSecret, parseOidcClients } from '../../utils/oidc'
-
 const DEMO_ORG = { id: 'org-demo', name: 'Demo Org', slug: 'demo' }
 const DYNAMIC_ROLE = 'project-viewer'
 const DYNAMIC_ABILITY = { project: ['read'] }
@@ -10,10 +8,17 @@ const TEST_USERS = [
   { email: 'bob@seed.local', name: 'Bob Viewer', password: 'Passw0rd!', orgRole: DYNAMIC_ROLE },
 ]
 
+const DEMO_CLIENTS = [
+  { name: 'Express RP', redirectUris: ['http://localhost:3001/callback'], public: false },
+  { name: 'Next RP', redirectUris: ['http://localhost:3002/api/auth/callback/betterauth'], public: false },
+  { name: 'Nuxt RP', redirectUris: ['http://localhost:3003/auth/oidc/callback'], public: false },
+  { name: 'Vue SPA', redirectUris: ['http://localhost:3004/callback'], public: true },
+]
+
 export default defineTask({
   meta: {
     name: 'seed:idp',
-    description: 'Seed OIDC clients, system admin, demo org, dynamic role, test users, automation key',
+    description: 'Seed system admin, demo org, dynamic role, test users, automation key, demo OAuth clients',
   },
   async run() {
     const auth = serverAuth()
@@ -74,28 +79,22 @@ export default defineTask({
     for (const testUser of testUsers)
       await ensureMember(testUser.id, testUser.orgRole)
 
-    const clients = parseOidcClients(rc.oidcClients)
-    const seededClients: string[] = []
-    for (const client of clients) {
-      const data = {
-        clientId: client.clientId,
-        clientSecret: !client.public && client.clientSecret ? await hashClientSecret(client.clientSecret) : null,
-        name: client.name,
-        type: client.type ?? null,
-        public: Boolean(client.public),
-        redirectUris: client.redirectUris,
-        skipConsent: client.skipConsent ?? false,
-        requirePKCE: true,
-        tokenEndpointAuthMethod: client.public ? 'none' : 'client_secret_basic',
-        disabled: false,
-        updatedAt: now,
-      }
-      const existing = await adapter.findOne<{ id: string }>({ model: 'oauthClient', where: [{ field: 'clientId', value: client.clientId }] })
+    const seededClients = []
+    for (const demo of DEMO_CLIENTS) {
+      const existing = await adapter.findOne<{ clientId: string }>({ model: 'oauthClient', where: [{ field: 'name', value: demo.name }] })
       if (existing)
-        await adapter.update({ model: 'oauthClient', where: [{ field: 'clientId', value: client.clientId }], update: data })
-      else
-        await adapter.create({ model: 'oauthClient', data: { id: `oidc-client-${client.clientId}`, ...data, createdAt: now } })
-      seededClients.push(client.clientId)
+        await adapter.delete({ model: 'oauthClient', where: [{ field: 'clientId', value: existing.clientId }] })
+      seededClients.push(await createOAuthClient(adapter, {
+        name: demo.name,
+        redirectUris: demo.redirectUris,
+        public: demo.public,
+        skipConsent: true,
+      }))
+    }
+
+    if (import.meta.dev && seededClients.length) {
+      const { writeFileSync } = await import('node:fs')
+      writeFileSync(`${process.cwd()}/examples/.clients.json`, `${JSON.stringify(seededClients, null, 2)}\n`)
     }
 
     const keyUser = testUsers.find(user => user.email === 'bob@seed.local')
@@ -116,7 +115,7 @@ export default defineTask({
       adminId,
       org: org.id,
       dynamicRole: DYNAMIC_ROLE,
-      clients: seededClients,
+      clients: seededClients.map(client => ({ name: client.name, clientId: client.clientId })),
       testUsers: testUsers.map(user => user.email),
       apiKey: apiKeyValue ?? '(already seeded)',
     }
