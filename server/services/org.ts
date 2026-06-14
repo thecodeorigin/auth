@@ -1,7 +1,7 @@
 import { db } from '@nuxthub/db'
-import { member, organization, user } from '@nuxthub/db/schema'
+import { invitation, member, organization, organizationRole, session, user } from '@nuxthub/db/schema'
 import { eq } from 'drizzle-orm'
-import { accessGrantAll } from './access'
+import { accessClearOrg, accessGrantAll } from './access'
 
 const ADMIN_ROLES = new Set(['owner', 'admin'])
 
@@ -63,4 +63,22 @@ export async function orgEnsurePersonal(userId: string): Promise<void> {
 
   // default-closed: owner needs an explicit all-apps grant to access their own org
   await accessGrantAll(orgId, userId)
+}
+
+/**
+ * Delete an organization and every dependent row. D1 has no FK cascade at
+ * runtime, so each dependent table is cleared explicitly: access grants,
+ * members, dynamic roles, invitations, and any session still pointing at it
+ * (activeOrganizationId nulled so the user isn't stuck on a dead org).
+ * Used by the test-org cleanup task — NEVER call on a personal org.
+ */
+export async function orgDeleteCascade(orgId: string): Promise<void> {
+  await accessClearOrg(orgId)
+  await db.delete(member).where(eq(member.organizationId, orgId))
+  await db.delete(organizationRole).where(eq(organizationRole.organizationId, orgId))
+  await db.delete(invitation).where(eq(invitation.organizationId, orgId))
+  await db.update(session)
+    .set({ activeOrganizationId: null })
+    .where(eq(session.activeOrganizationId, orgId))
+  await db.delete(organization).where(eq(organization.id, orgId))
 }
