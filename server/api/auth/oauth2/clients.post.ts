@@ -2,7 +2,10 @@ import { z } from 'zod'
 
 const bodySchema = z.object({
   name: z.string().min(1),
-  redirectUris: z.array(z.string().url()).min(1),
+  redirectUris: z.array(z.string().url().refine(
+    uri => /^https?:\/\//i.test(uri),
+    { message: 'Only http:// and https:// redirect URIs are permitted' },
+  )).min(1),
   type: z.enum(['web', 'native', 'user-agent-based']).optional(),
   public: z.boolean().optional(),
   skipConsent: z.boolean().optional(),

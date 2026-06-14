@@ -6,13 +6,36 @@ export default defineNuxtConfig({
     '@onmax/nuxt-better-auth',
     'nuxt-resend',
     'nuxt-security',
+    '@nuxt/ui',
+    '@nuxt/icon',
+    '@nuxt/fonts',
+    '@nuxt/image',
+    '@vueuse/nuxt',
   ],
+
+  components: false,
+
+  css: ['~/assets/css/main.css'],
+
+  imports: {
+    dirs: ['~/lib'],
+  },
 
   eslint: {
     config: {
       standalone: false,
       stylistic: false,
     },
+  },
+
+  // Bundle icons locally → served as 'self', no CDN, no CSP change.
+  icon: {
+    clientBundle: { scan: true, sizeLimitKb: 512 },
+    serverBundle: 'local',
+  },
+
+  vite: {
+    optimizeDeps: { include: ['@casl/ability', '@casl/vue'] },
   },
 
   nitro: {
@@ -24,6 +47,10 @@ export default defineNuxtConfig({
       tasks: true,
     },
     routeRules: {
+      // SEC-CSP: the OIDC surface keeps the strict img-src ('self' data:). The
+      // avatar hosts are added to the GLOBAL CSP (for dashboard HTML pages), so
+      // here we override img-src back to strict to keep /api/auth/** CSP
+      // byte-identical to the pre-change OIDC headers (AC3).
       '/api/auth/**': { cors: false, security: { xssValidator: false } },
       '/api/**': { security: { csrf: false } },
       '/_nitro/**': { security: { csrf: false } },
@@ -43,7 +70,7 @@ export default defineNuxtConfig({
         'default-src': ['\'self\''],
         'script-src': ['\'self\'', '\'nonce-{{nonce}}\'', '\'strict-dynamic\''],
         'style-src': ['\'self\'', '\'unsafe-inline\''],
-        'img-src': ['\'self\'', 'data:'],
+        'img-src': ['\'self\'', 'data:', 'https://lh3.googleusercontent.com', 'https://avatars.githubusercontent.com'],
         'font-src': ['\'self\''],
         'connect-src': ['\'self\'', 'ws:', 'wss:'],
         'base-uri': ['\'self\''],

@@ -8,6 +8,15 @@ type WhereValue = string | number | boolean | string[] | number[] | Date | null
 export interface ClientAdapter {
   create: (input: { model: string, data: Record<string, unknown> }) => Promise<unknown>
   findOne: <T>(input: { model: string, where: Array<{ field: string, value: WhereValue }> }) => Promise<T | null>
+  update: (input: { model: string, where: Array<{ field: string, value: WhereValue }>, update: Record<string, unknown> }) => Promise<unknown>
+  delete: (input: { model: string, where: Array<{ field: string, value: WhereValue }> }) => Promise<unknown>
+}
+
+export interface ClientPatch {
+  name?: string
+  redirectUris?: string[]
+  skipConsent?: boolean
+  disabled?: boolean
 }
 
 export interface ClientCreateInput {
@@ -100,6 +109,63 @@ export async function clientGet(adapter: ClientAdapter, clientId: string): Promi
     disabled: client.disabled,
     createdAt: client.createdAt,
   }
+}
+
+/**
+ * Rotate a confidential client's secret. Returns the new plaintext secret ONCE
+ * (the stored value is hashed). Returns null if the client is missing; the
+ * `public` flag means there is no secret to rotate.
+ */
+export async function clientRotateSecret(adapter: ClientAdapter, clientId: string): Promise<{ clientId: string, clientSecret: string } | null | 'public'> {
+  const existing = await adapter.findOne<{ clientId: string, public: boolean | null }>({
+    model: 'oauthClient',
+    where: [{ field: 'clientId', value: clientId }],
+  })
+  if (!existing)
+    return null
+  if (existing.public)
+    return 'public'
+
+  const clientSecret = randomToken(48)
+  await adapter.update({
+    model: 'oauthClient',
+    where: [{ field: 'clientId', value: clientId }],
+    update: { clientSecret: sha256Base64Url(clientSecret), updatedAt: new Date() },
+  })
+  return { clientId, clientSecret }
+}
+
+export async function clientUpdate(adapter: ClientAdapter, clientId: string, patch: ClientPatch): Promise<boolean> {
+  const existing = await adapter.findOne<{ clientId: string }>({
+    model: 'oauthClient',
+    where: [{ field: 'clientId', value: clientId }],
+  })
+  if (!existing)
+    return false
+
+  const update: Record<string, unknown> = { updatedAt: new Date() }
+  if (patch.name !== undefined)
+    update.name = patch.name
+  if (patch.redirectUris !== undefined)
+    update.redirectUris = patch.redirectUris
+  if (patch.skipConsent !== undefined)
+    update.skipConsent = patch.skipConsent
+  if (patch.disabled !== undefined)
+    update.disabled = patch.disabled
+
+  await adapter.update({ model: 'oauthClient', where: [{ field: 'clientId', value: clientId }], update })
+  return true
+}
+
+export async function clientDelete(adapter: ClientAdapter, clientId: string): Promise<boolean> {
+  const existing = await adapter.findOne<{ clientId: string }>({
+    model: 'oauthClient',
+    where: [{ field: 'clientId', value: clientId }],
+  })
+  if (!existing)
+    return false
+  await adapter.delete({ model: 'oauthClient', where: [{ field: 'clientId', value: clientId }] })
+  return true
 }
 
 export async function clientList(): Promise<ClientListItem[]> {
