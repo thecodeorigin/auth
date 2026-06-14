@@ -10,7 +10,6 @@ import { claimsResolve } from './services/claims'
 import { clientListOrigins } from './services/client'
 import { entitlementsResolve } from './services/entitlements'
 import { orgEnsurePersonal } from './services/org'
-import { polarCheckoutProducts } from './services/polar-products'
 import { subscriptionClearForUser, subscriptionUpsertFromPolar } from './services/subscription'
 import { sendEmail } from './utils/email'
 import { getDevWebhookSecret } from './utils/polar-webhook-secret'
@@ -199,7 +198,8 @@ export default defineServerAuth(({ runtimeConfig }) => {
         getCustomerCreateParams: async ({ user }) => ({ metadata: { userId: user.id ?? '' } }),
         use: [
           checkout({
-            products: polarCheckoutProducts(runtimeConfig), // [] when no sandbox IDs set → checkout disabled, no crash
+            // No static product list: checkout is per-product — the UI passes the
+            // Polar product id resolved at runtime (services/polar-products.ts).
             successUrl: `${baseURL}/account/billing?checkout_id={CHECKOUT_ID}`,
             authenticatedUsersOnly: true,
           }),

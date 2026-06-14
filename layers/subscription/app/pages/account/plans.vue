@@ -2,34 +2,8 @@
 import { PLANS, productBySlug } from '#shared/catalog'
 import DashboardNavbar from '~/components/Dashboard/DashboardNavbar.vue'
 
-const billing = useBillingApi()
-const toast = useToast()
-const { data: cfg } = await useAsyncData('billing-config', () => billing.config(), {
-  default: () => ({ polarConfigured: false }),
-  server: false,
-})
-const busy = ref<string | null>(null)
-
-async function checkout(slug: string) {
-  if (!cfg.value.polarConfigured) {
-    toast.add({ title: 'Billing is not configured', color: 'warning' })
-    return
-  }
-  busy.value = slug
-  try {
-    const res = await billing.checkout(slug) as { data?: { url?: string }, url?: string }
-    const url = res?.data?.url ?? res?.url
-    if (url)
-      window.location.href = url // full-page redirect to Polar (CSP-safe)
-  }
-  catch (err) {
-    toast.add({ title: (err as Error)?.message ?? 'Checkout failed', color: 'error' })
-  }
-  finally {
-    busy.value = null
-  }
-}
-
+// Browse-only overview. Checkout is per-product and lives on the product detail
+// page (/account/products/[slug]) — each card links there.
 function price(cents: number, currency: string) {
   return cents === 0 ? 'Free' : new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100)
 }
@@ -41,10 +15,6 @@ function price(cents: number, currency: string) {
       <DashboardNavbar title="Available plans" />
     </template>
     <template #body>
-      <UAlert
-        v-if="!cfg.polarConfigured" color="warning" variant="subtle" class="mb-6"
-        title="Billing unavailable" description="Polar is not configured in this environment — checkout is disabled."
-      />
       <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <UCard v-for="p in PLANS" :key="p.slug">
           <div class="flex items-center gap-3">
@@ -63,8 +33,8 @@ function price(cents: number, currency: string) {
             </li>
           </ul>
           <UButton
-            class="mt-4 w-full" color="primary" :label="p.priceCents ? 'Get plan' : 'Activate'"
-            :loading="busy === p.slug" :disabled="!cfg.polarConfigured" @click="checkout(p.slug)"
+            class="mt-4 w-full" color="primary" variant="soft" label="View product"
+            trailing-icon="i-lucide-arrow-right" :to="`/account/products/${p.productSlug}`"
           />
         </UCard>
       </div>

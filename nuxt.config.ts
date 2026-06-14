@@ -118,10 +118,6 @@ export default defineNuxtConfig({
     allowImpersonation: '',
     polarAccessToken: '',
     polarWebhookSecret: '',
-    polarProductNordvpn: '',
-    polarProductNordpassPremium: '',
-    polarProductNordpassFamily: '',
-    polarProductNordlocker: '',
     public: {
       siteUrl: '',
     },

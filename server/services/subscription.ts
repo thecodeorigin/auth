@@ -97,7 +97,7 @@ export async function subscriptionUpsertFromPolar(sub: {
 }): Promise<void> {
   const { polarPlanSlugForProduct } = await import('./polar-products')
   const userId = (sub.metadata?.userId as string | undefined) ?? sub.customer?.external_id ?? null
-  const planSlug = (sub.metadata?.planSlug as string | undefined) ?? polarPlanSlugForProduct(sub.product_id)
+  const planSlug = (sub.metadata?.planSlug as string | undefined) ?? await polarPlanSlugForProduct(sub.product_id)
   if (!userId || !planSlug) {
     console.warn('[billing] webhook: cannot resolve userId/planSlug', sub.id, { userId, planSlug })
     return

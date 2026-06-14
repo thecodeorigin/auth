@@ -33,7 +33,7 @@ const ICON_COLOR: Record<CatalogProduct['color'], string> = {
         </div>
         <UButton
           v-if="!active" color="primary" size="sm" label="Renew subscription"
-          :to="`/account/plans?product=${product.slug}`" @click.stop
+          :to="`/account/products/${product.slug}`" @click.stop
         />
         <UIcon v-else name="i-lucide-chevron-right" class="size-5 text-muted" />
       </div>

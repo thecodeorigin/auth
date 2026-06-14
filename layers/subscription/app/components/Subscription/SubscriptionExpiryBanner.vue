@@ -22,7 +22,7 @@ const product = computed(() => {
         <p class="text-muted text-sm">
           Renew now and stay protected online.
         </p>
-        <UButton class="mt-3" color="primary" label="Renew" :to="`/account/plans?product=${product.slug}`" />
+        <UButton class="mt-3" color="primary" label="Renew" :to="`/account/products/${product.slug}`" />
       </div>
     </div>
   </UCard>

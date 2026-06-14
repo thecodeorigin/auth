@@ -12,7 +12,10 @@ export function useBillingApi() {
   }
   return {
     config: () => $http<{ polarConfigured: boolean }>('/api/billing/config'),
-    checkout: (slug: string) => c().checkout({ slug }),
+    // catalog plan slug → Polar product id (resolved live from the Polar API).
+    products: () => $http<{ polarConfigured: boolean, products: Record<string, string> }>('/api/billing/products'),
+    // Checkout is per-product: pass the resolved Polar product id directly.
+    checkout: (productId: string) => c().checkout({ products: [productId] }),
     portal: () => c().customer.portal(),
     state: () => c().customer.state(),
     orders: (query: { page?: number, limit?: number } = {}) =>
