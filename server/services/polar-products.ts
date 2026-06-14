@@ -64,3 +64,53 @@ export async function polarPlanSlugForProduct(productId: string): Promise<string
 export function isPolarConfigured(): boolean {
   return !!useRuntimeConfig().polarAccessToken
 }
+
+// Polar validates email deliverability (real TLD + MX), so it rejects seeded
+// demo addresses like @seed.local. Swap such domains for the project's real
+// sending domain (from runtimeConfig.emailFrom — it has MX). The customer is
+// keyed on externalId (= our userId), so this email is only metadata.
+const RESERVED_TLDS = new Set(['local', 'localhost', 'test', 'invalid', 'example'])
+function polarSafeEmail(email: string): string {
+  const fromDomain = (useRuntimeConfig().emailFrom || 'noreply@thecodeorigin.com').split('@').pop() || 'thecodeorigin.com'
+  const at = email.lastIndexOf('@')
+  if (at === -1)
+    return `${email}@${fromDomain}`
+  const tld = email.slice(at + 1).split('.').pop()?.toLowerCase()
+  return tld && RESERVED_TLDS.has(tld) ? `${email.slice(0, at)}@${fromDomain}` : email
+}
+
+/**
+ * Ensure a Polar customer exists for our user (keyed on externalId = our userId).
+ * createCustomerOnSignUp only covers NEW sign-ups, so seeded/older users have no
+ * Polar customer — without this the portal API 500s ("Customer does not exist").
+ * Idempotent: no-op when the customer already exists.
+ */
+export async function polarEnsureCustomer(userId: string, email: string, name?: string): Promise<void> {
+  const polar = polarClient()
+  if (!polar)
+    return
+  try {
+    await polar.customers.getExternal({ externalId: userId })
+    return // already a customer
+  }
+  catch {
+    // not found → create below
+  }
+  try {
+    await polar.customers.create({ email: polarSafeEmail(email), externalId: userId, name: name || email })
+  }
+  catch (error) {
+    // tolerate races / "already exists" — the session create below will still work
+    console.warn('[billing] polarEnsureCustomer: create skipped', userId, error)
+  }
+}
+
+/** Ensure the customer exists, then mint a Polar customer-portal session URL. */
+export async function polarPortalUrl(userId: string, email: string, name?: string): Promise<string | null> {
+  const polar = polarClient()
+  if (!polar)
+    return null
+  await polarEnsureCustomer(userId, email, name)
+  const session = await polar.customerSessions.create({ externalCustomerId: userId })
+  return session.customerPortalUrl
+}

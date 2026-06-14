@@ -64,19 +64,20 @@ async function checkout(planSlug: string) {
 }
 
 // Manage = the Polar customer portal (manages payment method, invoices, cancel).
+// The /api/billing/portal route ensures the Polar customer exists first.
 async function manage(planSlug: string) {
   busy.value = planSlug
   try {
-    const { data, error } = await billing.portal() as PolarRedirect
-    if (error)
-      throw new Error(error.message ?? 'Could not open the billing portal')
-    if (data?.url)
-      window.location.href = data.url
+    const { url } = await billing.portal()
+    if (url)
+      window.location.href = url // full-page redirect to Polar (CSP-safe)
     else
       throw new Error('Billing portal is unavailable')
   }
   catch (err) {
-    toast.add({ title: (err as Error)?.message ?? 'Could not open the billing portal', color: 'error' })
+    const msg = (err as { data?: { statusMessage?: string } })?.data?.statusMessage
+      ?? (err as Error)?.message ?? 'Could not open the billing portal'
+    toast.add({ title: msg, color: 'error' })
   }
   finally {
     busy.value = null
