@@ -2,15 +2,15 @@ const ORG_B = { id: 'org-b', name: 'Org B', slug: 'org-b' }
 
 /**
  * Phase-2 authorization regression fixtures (AC3/AC4). Idempotent.
- * Creates a SECOND org with alice as a `viewer` member, scoped to the Express RP client ONLY
+ * Creates a SECOND org with alice as a `viewer` member, scoped to the NordVPN client ONLY
  * (a tier-0 exact access grant). Org B is created via the adapter directly — NOT the org
  * plugin — so it does NOT receive an afterCreateOrganization '*' grant. This is what proves
- * default-closed per-app selection: Express RP → Org B (viewer); any other client → personal org.
+ * default-closed per-app selection: NordVPN → Org B (viewer); any other client → personal org.
  */
 export default defineTask({
   meta: {
     name: 'seed:authz-fixtures',
-    description: 'Phase-2 authz fixtures: Org B with alice as viewer scoped to the Express RP client only',
+    description: 'Phase-2 authz fixtures: Org B with alice as viewer scoped to the NordVPN client only',
   },
   async run() {
     const auth = serverAuth()
@@ -22,9 +22,9 @@ export default defineTask({
     if (!alice)
       throw new Error('alice@seed.local not found — run seed:idp first')
 
-    const express = await adapter.findOne<{ clientId: string }>({ model: 'oauthClient', where: [{ field: 'name', value: 'Express RP' }] })
-    if (!express)
-      throw new Error('Express RP client not found — run seed:idp first')
+    const nordvpn = await adapter.findOne<{ clientId: string }>({ model: 'oauthClient', where: [{ field: 'name', value: 'NordVPN' }] })
+    if (!nordvpn)
+      throw new Error('NordVPN client not found — run seed:idp first')
 
     const existingOrg = await adapter.findOne<{ id: string }>({ model: 'organization', where: [{ field: 'slug', value: ORG_B.slug }] })
     const org = existingOrg ?? await adapter.create<{ id: string }>({
@@ -45,16 +45,16 @@ export default defineTask({
     // Clear alice's Org B scopes so the ONLY grant is the current Express RP client (deterministic).
     await accessClearMember(org.id, alice.id)
 
-    // tier-0 exact grant: alice may reach Express RP — and ONLY Express RP — inside Org B.
+    // tier-0 exact grant: alice may reach NordVPN — and ONLY NordVPN — inside Org B.
     // role:null → inherit the member's base role ('viewer'). Goes through the Phase-3 service.
-    await accessSet({ organizationId: org.id, userId: alice.id, clientId: express.clientId, role: null })
+    await accessSet({ organizationId: org.id, userId: alice.id, clientId: nordvpn.clientId, role: null })
 
     return {
       result: 'ok',
       aliceId: alice.id,
       orgB: org.id,
       personalOrg: `org-u-${alice.id}`,
-      expressClientId: express.clientId,
+      nordvpnClientId: nordvpn.clientId,
     }
   },
 })

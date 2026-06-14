@@ -1,16 +1,55 @@
 import { apiKey } from '@better-auth/api-key'
 import { oauthProvider } from '@better-auth/oauth-provider'
 import { defineServerAuth } from '@onmax/nuxt-better-auth/config'
+import { checkout, polar, portal, usage, webhooks } from '@polar-sh/better-auth'
+import { Polar } from '@polar-sh/sdk'
 import { admin as adminPlugin, jwt, openAPI, organization } from 'better-auth/plugins'
 import { ac, roles } from '#shared/permissions'
 import { accessClearMember, accessClearOrg, accessGrantAll } from './services/access'
 import { claimsResolve } from './services/claims'
 import { clientListOrigins } from './services/client'
+import { entitlementsResolve } from './services/entitlements'
 import { orgEnsurePersonal } from './services/org'
+import { polarCheckoutProducts } from './services/polar-products'
+import { subscriptionClearForUser, subscriptionUpsertFromPolar } from './services/subscription'
 import { sendEmail } from './utils/email'
+import { getDevWebhookSecret } from './utils/polar-webhook-secret'
+
+/**
+ * The Polar webhook payloads (`p.data`) are parsed SDK objects (camelCase, Date
+ * fields). subscriptionUpsertFromPolar normalizes on the wire shape (snake_case,
+ * ISO strings), so map at the boundary here. Typed structurally against the SDK
+ * Subscription fields we read — no `any`.
+ */
+function polarSubToInput(d: {
+  id: string
+  status: string
+  currentPeriodEnd?: Date | null
+  cancelAtPeriodEnd?: boolean
+  modifiedAt?: Date | null
+  productId: string
+  customer?: { id?: string | null, externalId?: string | null } | null
+  metadata?: Record<string, unknown> | null
+}) {
+  return {
+    id: d.id,
+    status: d.status,
+    current_period_end: d.currentPeriodEnd ? new Date(d.currentPeriodEnd).toISOString() : null,
+    cancel_at_period_end: d.cancelAtPeriodEnd ?? false,
+    modified_at: d.modifiedAt ? new Date(d.modifiedAt).toISOString() : null,
+    product_id: d.productId,
+    customer: { id: d.customer?.id ?? null, external_id: d.customer?.externalId ?? null },
+    metadata: d.metadata ?? null,
+  }
+}
 
 export default defineServerAuth(({ runtimeConfig }) => {
   const baseURL = runtimeConfig.public?.siteUrl || 'http://localhost:3000'
+
+  const polarClient = new Polar({
+    accessToken: runtimeConfig.polarAccessToken,
+    server: 'sandbox',
+  })
 
   return {
     emailAndPassword: {
@@ -63,6 +102,19 @@ export default defineServerAuth(({ runtimeConfig }) => {
           },
         },
       },
+      user: {
+        // better-auth admin deleteUser → clean up D1 rows (no FK cascade at runtime).
+        delete: {
+          before: async (user) => {
+            try {
+              await subscriptionClearForUser(user.id)
+            }
+            catch (error) {
+              console.error('[auth] subscriptionClearForUser failed', user.id, error)
+            }
+          },
+        },
+      },
     },
 
     plugins: [
@@ -82,10 +134,16 @@ export default defineServerAuth(({ runtimeConfig }) => {
           return claimsResolve(user.id, clientId)
         },
         // userinfo hook gets the validated access-token payload; azp = requesting client.
+        // Entitlements ride into userinfo ONLY (re-resolved live), never the immutable id_token.
         async customUserInfoClaims({ user, jwt }) {
           const clientId = (jwt as { azp?: string, client_id?: string } | undefined)?.azp
             ?? (jwt as { client_id?: string } | undefined)?.client_id ?? null
-          return claimsResolve(user.id, clientId)
+          const [claims, entitlement] = await Promise.all([
+            claimsResolve(user.id, clientId),
+            entitlementsResolve(user.id, clientId), // live per-call → reflects current DB
+          ])
+          // entitlement is null when the requesting client maps to no Nord product.
+          return { ...claims, entitlement }
         },
       }),
       adminPlugin({
@@ -134,6 +192,31 @@ export default defineServerAuth(({ runtimeConfig }) => {
         enableSessionForAPIKeys: true,
       }),
       openAPI(),
+      polar({
+        client: polarClient,
+        createCustomerOnSignUp: true,
+        // Bind the Polar customer to our user id so webhooks resolve back to a user.
+        getCustomerCreateParams: async ({ user }) => ({ metadata: { userId: user.id ?? '' } }),
+        use: [
+          checkout({
+            products: polarCheckoutProducts(runtimeConfig), // [] when no sandbox IDs set → checkout disabled, no crash
+            successUrl: `${baseURL}/account/billing?checkout_id={CHECKOUT_ID}`,
+            authenticatedUsersOnly: true,
+          }),
+          portal(),
+          usage(),
+          webhooks({
+            // prod: NUXT_POLAR_WEBHOOK_SECRET; dev: auto-provisioned via the global bridge.
+            secret: runtimeConfig.polarWebhookSecret || getDevWebhookSecret() || '',
+            onSubscriptionCreated: p => subscriptionUpsertFromPolar(polarSubToInput(p.data)),
+            onSubscriptionUpdated: p => subscriptionUpsertFromPolar(polarSubToInput(p.data)),
+            onSubscriptionActive: p => subscriptionUpsertFromPolar(polarSubToInput(p.data)),
+            onSubscriptionCanceled: p => subscriptionUpsertFromPolar(polarSubToInput(p.data)),
+            onSubscriptionRevoked: p => subscriptionUpsertFromPolar(polarSubToInput(p.data)),
+            onSubscriptionUncanceled: p => subscriptionUpsertFromPolar(polarSubToInput(p.data)),
+          }),
+        ],
+      }),
     ],
   }
 })

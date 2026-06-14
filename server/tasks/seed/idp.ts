@@ -9,10 +9,10 @@ const TEST_USERS = [
 ]
 
 const DEMO_CLIENTS = [
-  { name: 'Express RP', redirectUris: ['http://localhost:3001/callback'], public: false },
-  { name: 'Next RP', redirectUris: ['http://localhost:3002/api/auth/callback/betterauth'], public: false },
-  { name: 'Nuxt RP', redirectUris: ['http://localhost:3003/auth/oidc/callback'], public: false },
-  { name: 'Vue SPA', redirectUris: ['http://localhost:3004/callback'], public: true },
+  { name: 'NordVPN', redirectUris: ['http://localhost:3001/callback'], public: false },
+  { name: 'NordPass', redirectUris: ['http://localhost:3002/api/auth/callback/betterauth'], public: false },
+  { name: 'NordLocker', redirectUris: ['http://localhost:3003/auth/oidc/callback'], public: false },
+  { name: 'Nord Web', redirectUris: ['http://localhost:3004/callback'], public: true },
 ]
 
 export default defineTask({

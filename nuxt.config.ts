@@ -11,6 +11,9 @@ export default defineNuxtConfig({
     '@nuxt/fonts',
     '@nuxt/image',
     '@vueuse/nuxt',
+    // '@nuxtjs/ngrok' removed: the dev Polar-webhook plugin owns the tunnel via
+    // @ngrok/ngrok directly (server/plugins/polar-webhook.dev.ts) so it can read
+    // listener.url(); keeping the module too would open a second tunnel.
   ],
 
   components: false,
@@ -36,6 +39,9 @@ export default defineNuxtConfig({
 
   vite: {
     optimizeDeps: { include: ['@casl/ability', '@casl/vue'] },
+    // Let the rotating ngrok host (and Polar's webhook POST Host header) through
+    // Vite's dev-server host check; the @nuxtjs/ngrok module used to set this.
+    server: { allowedHosts: ['.ngrok-free.app'] },
   },
 
   nitro: {
@@ -110,6 +116,12 @@ export default defineNuxtConfig({
     adminUserIds: '',
     seedAdminEmail: 'admin@thecodeorigin.com',
     allowImpersonation: '',
+    polarAccessToken: '',
+    polarWebhookSecret: '',
+    polarProductNordvpn: '',
+    polarProductNordpassPremium: '',
+    polarProductNordpassFamily: '',
+    polarProductNordlocker: '',
     public: {
       siteUrl: '',
     },
