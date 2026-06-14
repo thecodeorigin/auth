@@ -1,8 +1,8 @@
 export default defineNuxtPlugin(() => {
   useLayerRegistry().contribute({
     navItems: [
-      // Member main: business-facing account items.
-      { id: 'm-applications', label: 'Applications', icon: 'i-lucide-layout-grid', to: '/account/authorized-apps', section: 'main', priority: 10, role: 'member' },
+      // Member main: business-facing account items. (Owned products live on the
+      // Home dashboard; there is no separate OAuth "authorized apps" surface.)
       { id: 'm-api-keys', label: 'API Keys', icon: 'i-lucide-key', to: '/account/api-keys', section: 'main', priority: 40, role: 'member' },
 
       // Settings group (both roles — always the signed-in user's own account).

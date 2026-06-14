@@ -4,6 +4,8 @@ import { planBySlug, plansForProduct, productBySlug } from '#shared/catalog'
 import { isActive } from '#shared/subscription'
 import DashboardNavbar from '~/components/Dashboard/DashboardNavbar.vue'
 
+interface PolarRedirect { data?: { url?: string }, error?: { message?: string } | null }
+
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
 const product = computed(() => productBySlug(slug.value))
@@ -35,6 +37,7 @@ const familySeats = computed(() => familySub.value ? planBySlug(familySub.value.
 function ownedSub(planSlug: string) {
   return owned.value.find(s => s.planSlug === planSlug)
 }
+// A plan is purchasable only when a name-matching Polar product exists.
 function productId(planSlug: string) {
   return billingData.value.products[planSlug]
 }
@@ -42,19 +45,38 @@ function productId(planSlug: string) {
 const busy = ref<string | null>(null)
 async function checkout(planSlug: string) {
   const id = productId(planSlug)
-  if (!id) {
-    toast.add({ title: 'This plan is not available for purchase right now', color: 'warning' })
+  if (!id)
     return
-  }
   busy.value = planSlug
   try {
-    const res = await billing.checkout(id) as { data?: { url?: string }, url?: string }
-    const url = res?.data?.url ?? res?.url
-    if (url)
-      window.location.href = url // full-page redirect to Polar (CSP-safe)
+    const { data, error } = await billing.checkout(id) as PolarRedirect
+    if (error)
+      throw new Error(error.message ?? 'Checkout failed')
+    if (data?.url)
+      window.location.href = data.url // full-page redirect to Polar (CSP-safe)
   }
   catch (err) {
     toast.add({ title: (err as Error)?.message ?? 'Checkout failed', color: 'error' })
+  }
+  finally {
+    busy.value = null
+  }
+}
+
+// Manage = the Polar customer portal (manages payment method, invoices, cancel).
+async function manage(planSlug: string) {
+  busy.value = planSlug
+  try {
+    const { data, error } = await billing.portal() as PolarRedirect
+    if (error)
+      throw new Error(error.message ?? 'Could not open the billing portal')
+    if (data?.url)
+      window.location.href = data.url
+    else
+      throw new Error('Billing portal is unavailable')
+  }
+  catch (err) {
+    toast.add({ title: (err as Error)?.message ?? 'Could not open the billing portal', color: 'error' })
   }
   finally {
     busy.value = null
@@ -77,7 +99,6 @@ function priceLabel(cents: number, currency: string, interval: string) {
     <template #body>
       <div v-if="product" class="grid gap-6 lg:grid-cols-3">
         <div class="lg:col-span-2 space-y-6">
-          <!-- Plans for this product: manage (active) / renew (expired) / buy (not owned). -->
           <UCard v-for="p in plans" :key="p.slug">
             <div class="flex items-center gap-4">
               <UIcon :name="product.icon" class="size-8" />
@@ -91,19 +112,21 @@ function priceLabel(cents: number, currency: string, interval: string) {
                 </p>
               </div>
 
+              <!-- Owned, active, paid → manage in the Polar customer portal. -->
               <UButton
-                v-if="ownedSub(p.slug) && isActive(ownedSub(p.slug)!)"
-                label="Manage plan" color="neutral" variant="subtle" to="/account/billing"
+                v-if="ownedSub(p.slug) && isActive(ownedSub(p.slug)!) && p.priceCents > 0"
+                label="Manage plan" color="neutral" variant="subtle"
+                :loading="busy === p.slug" @click="manage(p.slug)"
               />
+              <!-- Owned but expired → renew (only when a Polar product exists). -->
               <UButton
-                v-else-if="ownedSub(p.slug)"
-                label="Renew" color="primary" :loading="busy === p.slug"
-                :disabled="!productId(p.slug)" @click="checkout(p.slug)"
+                v-else-if="ownedSub(p.slug) && !isActive(ownedSub(p.slug)!) && productId(p.slug)"
+                label="Renew" color="primary" :loading="busy === p.slug" @click="checkout(p.slug)"
               />
+              <!-- Not owned → buy (only when a Polar product exists). -->
               <UButton
-                v-else-if="productId(p.slug)"
-                :label="p.priceCents ? 'Get plan' : 'Activate'" color="primary"
-                :loading="busy === p.slug" @click="checkout(p.slug)"
+                v-else-if="!ownedSub(p.slug) && productId(p.slug)"
+                label="Get plan" color="primary" :loading="busy === p.slug" @click="checkout(p.slug)"
               />
             </div>
           </UCard>
@@ -112,13 +135,6 @@ function priceLabel(cents: number, currency: string, interval: string) {
             v-if="familySub"
             :subscription-id="familySub.id"
             :seats="familySeats"
-          />
-
-          <UAlert
-            v-if="billingData.polarConfigured === false"
-            color="warning" variant="subtle"
-            title="Billing unavailable"
-            description="Polar is not configured in this environment — purchases are disabled."
           />
         </div>
 

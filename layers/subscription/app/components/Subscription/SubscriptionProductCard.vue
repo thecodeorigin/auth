@@ -32,7 +32,7 @@ const ICON_COLOR: Record<CatalogProduct['color'], string> = {
           <SubscriptionStatusBadge :sub="sub" />
         </div>
         <UButton
-          v-if="!active" color="primary" size="sm" label="Renew subscription"
+          v-if="!active && (plan?.priceCents ?? 0) > 0" color="primary" size="sm" label="Renew subscription"
           :to="`/account/products/${product.slug}`" @click.stop
         />
         <UIcon v-else name="i-lucide-chevron-right" class="size-5 text-muted" />

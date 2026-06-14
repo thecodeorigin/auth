@@ -29,6 +29,11 @@ async function loadOrgs() {
   }
 }
 
+// Load once on mount so the trigger shows the active org name immediately —
+// not just after the popover is first opened. Client-only (the better-auth
+// client carries the session only in the browser).
+onMounted(loadOrgs)
+
 watch(open, (val) => {
   if (val)
     loadOrgs()
