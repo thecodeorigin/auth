@@ -1,0 +1,1 @@
+ALTER TABLE `subscription` ADD `seats` integer DEFAULT 1 NOT NULL;

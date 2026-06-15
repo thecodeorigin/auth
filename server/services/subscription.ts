@@ -19,19 +19,6 @@ export async function subscriptionGet(id: string): Promise<SubscriptionRow | nul
   return row ? toRow(row) : null
 }
 
-/**
- * Cancel a subscription the caller owns.
- * - Polar-backed (has polarSubscriptionId): defer to Polar via the portal in the
- *   UI; this local route only flips cancelAtPeriodEnd so the dashboard reflects intent.
- *   (Authoritative cancel + refund flows happen in the Polar portal / webhook.)
- * - Seeded (source='seed', null polarSubscriptionId): LOCAL-ONLY — never touch Polar.
- */
-export async function subscriptionSetCancelAtPeriodEnd(id: string, cancel: boolean): Promise<void> {
-  await db.update(subscription)
-    .set({ cancelAtPeriodEnd: cancel, updatedAt: new Date() })
-    .where(eq(subscription.id, id))
-}
-
 /** Idempotent upsert used by BOTH the seed task and the Polar webhook. */
 export async function subscriptionUpsert(input: {
   id?: string
@@ -40,6 +27,7 @@ export async function subscriptionUpsert(input: {
   status: SubscriptionRow['status']
   currentPeriodEnd: number | null
   cancelAtPeriodEnd?: boolean
+  seats?: number
   source: SubscriptionRow['source']
   polarSubscriptionId?: string | null
   polarCustomerId?: string | null
@@ -59,6 +47,7 @@ export async function subscriptionUpsert(input: {
       status: input.status,
       currentPeriodEnd: input.currentPeriodEnd == null ? null : new Date(input.currentPeriodEnd),
       cancelAtPeriodEnd: input.cancelAtPeriodEnd ?? false,
+      seats: input.seats ?? 1,
       source: input.source,
       polarSubscriptionId: input.polarSubscriptionId ?? null,
       polarCustomerId: input.polarCustomerId ?? null,
@@ -71,6 +60,7 @@ export async function subscriptionUpsert(input: {
         status: input.status,
         currentPeriodEnd: input.currentPeriodEnd == null ? null : new Date(input.currentPeriodEnd),
         cancelAtPeriodEnd: input.cancelAtPeriodEnd ?? false,
+        seats: input.seats ?? 1,
         polarSubscriptionId: input.polarSubscriptionId ?? null,
         polarCustomerId: input.polarCustomerId ?? null,
         updatedAt,
@@ -92,6 +82,7 @@ export async function subscriptionUpsertFromPolar(sub: {
   cancel_at_period_end?: boolean
   modified_at?: string | null
   product_id: string
+  seats?: number | null
   customer?: { external_id?: string | null, id?: string | null } | null
   metadata?: Record<string, unknown> | null
 }): Promise<void> {
@@ -113,6 +104,7 @@ export async function subscriptionUpsertFromPolar(sub: {
     status,
     currentPeriodEnd: sub.current_period_end ? Date.parse(sub.current_period_end) : null,
     cancelAtPeriodEnd: sub.cancel_at_period_end ?? false,
+    seats: sub.seats ?? 1,
     source: 'polar',
     polarSubscriptionId: sub.id,
     polarCustomerId: sub.customer?.id ?? null,
@@ -152,6 +144,7 @@ function toRow(r: typeof subscription.$inferSelect): SubscriptionRow {
     status: r.status as SubscriptionRow['status'],
     currentPeriodEnd: r.currentPeriodEnd ? r.currentPeriodEnd.getTime() : null,
     cancelAtPeriodEnd: !!r.cancelAtPeriodEnd,
+    seats: r.seats,
     source: r.source as SubscriptionRow['source'],
     polarSubscriptionId: r.polarSubscriptionId,
     polarCustomerId: r.polarCustomerId,

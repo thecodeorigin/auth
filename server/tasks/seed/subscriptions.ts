@@ -1,3 +1,5 @@
+import { planBySlug } from '#shared/catalog'
+
 // Today = 2026-06-14. Dates chosen to match the Nord Account screenshots.
 const DEC_14_2023 = Date.parse('2023-12-14T00:00:00Z')
 const OCT_03_2027 = Date.parse('2027-10-03T00:00:00Z')
@@ -37,14 +39,26 @@ export default defineTask({
         out[email] = 'skipped (user not found — run seed:idp first)'
         continue
       }
-      for (const s of DEMO_SUBS)
-        await subscriptionUpsert({ userId: u.id, planSlug: s.planSlug, status: s.status, currentPeriodEnd: s.end, source: 'seed' })
+      for (const s of DEMO_SUBS) {
+        await subscriptionUpsert({
+          userId: u.id,
+          planSlug: s.planSlug,
+          status: s.status,
+          currentPeriodEnd: s.end,
+          seats: planBySlug(s.planSlug)?.seats ?? 1,
+          source: 'seed',
+        })
+      }
 
-      // NordPass Family: owner seat + 5 members = 6/6.
+      // NordPass Family: owner seat + 5 members = 6/6 (fills the 6 pre-paid seats).
       const familyId = `sub-seed-${u.id}-nordpass-family`
       await familyEnsureOwner(familyId, email, u.id)
-      for (const m of FAMILY_MEMBER_EMAILS)
-        await familyAddMember(familyId, 'nordpass-family', m)
+      await familyClearNonOwner(familyId) // deterministic: drop prior/extra members
+      const familySub = await subscriptionGet(familyId)
+      if (familySub) {
+        for (const m of FAMILY_MEMBER_EMAILS)
+          await familyAddMember(familySub, m)
+      }
       out[email] = 'seeded'
     }
     return { result: 'ok', users: out }

@@ -27,6 +27,7 @@ function polarSubToInput(d: {
   cancelAtPeriodEnd?: boolean
   modifiedAt?: Date | null
   productId: string
+  seats?: number | null
   customer?: { id?: string | null, externalId?: string | null } | null
   metadata?: Record<string, unknown> | null
 }) {
@@ -37,6 +38,7 @@ function polarSubToInput(d: {
     cancel_at_period_end: d.cancelAtPeriodEnd ?? false,
     modified_at: d.modifiedAt ? new Date(d.modifiedAt).toISOString() : null,
     product_id: d.productId,
+    seats: d.seats ?? 1,
     customer: { id: d.customer?.id ?? null, external_id: d.customer?.externalId ?? null },
     metadata: d.metadata ?? null,
   }
@@ -200,7 +202,7 @@ export default defineServerAuth(({ runtimeConfig }) => {
           checkout({
             // No static product list: checkout is per-product — the UI passes the
             // Polar product id resolved at runtime (services/polar-products.ts).
-            successUrl: `${baseURL}/account/billing?checkout_id={CHECKOUT_ID}`,
+            successUrl: `${baseURL}/?checkout_id={CHECKOUT_ID}`,
             authenticatedUsersOnly: true,
           }),
           portal(),

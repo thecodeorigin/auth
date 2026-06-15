@@ -15,6 +15,9 @@ export const subscription = sqliteTable('subscription', {
   status: text('status').notNull().default('active'), // active|trialing|past_due|canceled|expired
   currentPeriodEnd: integer('currentPeriodEnd', { mode: 'timestamp_ms' }), // null = perpetual (free tier)
   cancelAtPeriodEnd: integer('cancelAtPeriodEnd', { mode: 'boolean' }).notNull().default(false),
+  // Purchased seat capacity. 1 for singles; mirrors Polar `seats` for real subs
+  // (synced by the webhook). Members can be added up to this; Add-seat grows it.
+  seats: integer('seats').notNull().default(1),
   source: text('source').notNull().default('polar'), // seed|polar
   polarSubscriptionId: text('polarSubscriptionId'),
   polarCustomerId: text('polarCustomerId'),

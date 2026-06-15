@@ -6,7 +6,7 @@ export function useFamilyApi() {
     members: (subscriptionId: string) =>
       $http<FamilyMember[]>(`/api/account/family/${encodeURIComponent(subscriptionId)}/members`),
     add: (subscriptionId: string, email: string) =>
-      $http<{ ok: true }>(`/api/account/family/${encodeURIComponent(subscriptionId)}/members`, { method: 'POST', body: { email } }),
+      $http<{ ok: true, charged: boolean }>(`/api/account/family/${encodeURIComponent(subscriptionId)}/members`, { method: 'POST', body: { email } }),
     remove: (subscriptionId: string, memberId: string) =>
       $http<{ ok: true }>(`/api/account/family/${encodeURIComponent(subscriptionId)}/members/${encodeURIComponent(memberId)}`, { method: 'DELETE' }),
   }

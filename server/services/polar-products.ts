@@ -105,6 +105,24 @@ export async function polarEnsureCustomer(userId: string, email: string, name?: 
   }
 }
 
+/** Set a real Polar subscription's seat count (charges/credits proration). Returns the new seat count, or null if Polar is unconfigured or the call fails. */
+export async function polarSetSeats(polarSubscriptionId: string, seats: number): Promise<number | null> {
+  const polar = polarClient()
+  if (!polar)
+    return null
+  try {
+    const updated = await polar.subscriptions.update({
+      id: polarSubscriptionId,
+      subscriptionUpdate: { seats },
+    })
+    return updated.seats ?? seats
+  }
+  catch (error) {
+    console.error('[billing] polarSetSeats failed', polarSubscriptionId, seats, error)
+    return null
+  }
+}
+
 /** Ensure the customer exists, then mint a Polar customer-portal session URL. */
 export async function polarPortalUrl(userId: string, email: string, name?: string): Promise<string | null> {
   const polar = polarClient()

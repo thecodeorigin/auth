@@ -4,7 +4,5 @@ import type { SubscriptionRow } from '#shared/subscription'
 export function useSubscriptionsApi() {
   return {
     list: () => $http<SubscriptionRow[]>('/api/account/subscriptions'),
-    cancel: (id: string, cancel = true) =>
-      $http<{ ok: true }>(`/api/account/subscriptions/${encodeURIComponent(id)}/cancel`, { method: 'POST', body: { cancel } }),
   }
 }

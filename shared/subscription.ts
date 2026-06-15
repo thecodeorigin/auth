@@ -19,6 +19,7 @@ export interface SubscriptionRow {
   status: SubscriptionStatus
   currentPeriodEnd: number | null // epoch ms
   cancelAtPeriodEnd: boolean
+  seats: number
   source: SubscriptionSource
   polarSubscriptionId: string | null
   polarCustomerId: string | null
