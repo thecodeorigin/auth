@@ -77,7 +77,7 @@ test.describe('home dashboard as member (alice)', () => {
   test('admin home dashboard shows subscription cards', async ({ page, signInAs }) => {
     await signInAs('admin', '/')
     await page.waitForLoadState('networkidle')
-    // seed:subscriptions also seeds admin@thecodeorigin.com
+    // seed:subscriptions also seeds contact@thecodeorigin.com
     await expect(page.getByText('Products and services')).toBeVisible({ timeout: 8_000 })
     await expect(page.getByText('NordVPN').first()).toBeVisible()
     // NordPass appears in multiple plan names — match first occurrence

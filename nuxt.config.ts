@@ -109,7 +109,7 @@ export default defineNuxtConfig({
     githubClientId: '',
     githubClientSecret: '',
     adminUserIds: '',
-    seedAdminEmail: 'admin@thecodeorigin.com',
+    seedAdminEmail: 'contact@thecodeorigin.com',
     allowImpersonation: '',
     demoMode: '', // NUXT_DEMO_MODE=true → dev-only demo/e2e mode: enables "sign in as agent" + relaxes Polar customer creation. Off by default.
     polarAccessToken: '',

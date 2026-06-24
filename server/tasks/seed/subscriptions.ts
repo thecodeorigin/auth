@@ -6,7 +6,7 @@ const OCT_03_2027 = Date.parse('2027-10-03T00:00:00Z')
 const SEP_14_2027 = Date.parse('2027-09-14T00:00:00Z')
 
 // Who sees the simulated platform: the member persona AND the operator login.
-const DEMO_EMAILS = ['alice@seed.local', 'admin@thecodeorigin.com']
+const DEMO_EMAILS = ['alice@seed.local', 'contact@thecodeorigin.com']
 
 // (planSlug, status, currentPeriodEnd) — matches the dashboard screenshot exactly.
 const DEMO_SUBS: Array<{ planSlug: string, status: 'active' | 'expired', end: number | null }> = [

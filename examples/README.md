@@ -20,7 +20,7 @@ impersonation (dev only), and a scoped automation API key.
 
 | Email | Password | Role | Org membership |
 |---|---|---|---|
-| `admin@thecodeorigin.com` | `AdminPass1!` | global `admin` | `org-demo` owner |
+| `contact@thecodeorigin.com` | `AdminPass1!` | global `admin` | `org-demo` owner |
 | `alice@seed.local` | `Passw0rd!` | user | `org-demo` `member` |
 | `bob@seed.local` | `Passw0rd!` | user | `org-demo` `project-viewer` (dynamic role) |
 

@@ -25,7 +25,7 @@ export default defineTask({
     const ctx = await auth.$context
     const adapter = ctx.adapter
     const rc = useRuntimeConfig()
-    const adminEmail = rc.seedAdminEmail || 'admin@thecodeorigin.com'
+    const adminEmail = rc.seedAdminEmail || 'contact@thecodeorigin.com'
     const now = new Date()
 
     async function ensureUser(email: string, password: string, name: string, role?: string): Promise<string> {

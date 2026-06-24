@@ -121,10 +121,10 @@ test('last owner row has no remove option', async ({ page, signInAs }) => {
   await page.waitForLoadState('networkidle')
 
   // Find the admin (owner) row
-  await expect(page.getByText('admin@thecodeorigin.com')).toBeVisible({ timeout: 8_000 })
+  await expect(page.getByText('contact@thecodeorigin.com')).toBeVisible({ timeout: 8_000 })
 
   // The ellipsis menu on the owner row (when they are the last owner) should not show Remove
-  const ownerRow = page.locator('tr').filter({ hasText: 'admin@thecodeorigin.com' })
+  const ownerRow = page.locator('tr').filter({ hasText: 'contact@thecodeorigin.com' })
   const ellipsisBtn = ownerRow.getByRole('button', { name: /Member actions/i })
 
   // If there's no ellipsis button at all (isLastOwner guard hides the dropdown), that also passes

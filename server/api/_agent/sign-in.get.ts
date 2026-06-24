@@ -15,7 +15,7 @@ import { z } from 'zod'
  *   GET /api/_agent/sign-in?role=admin|member|viewer&redirect=/some/path
  */
 const AGENT_EMAILS = {
-  admin: 'admin@thecodeorigin.com',
+  admin: 'contact@thecodeorigin.com',
   member: 'alice@seed.local',
   viewer: 'bob@seed.local',
 } as const

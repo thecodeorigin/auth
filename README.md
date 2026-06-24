@@ -97,7 +97,7 @@ clients (written to `examples/.clients.json`), and test users:
 
 | Account | Email | Password |
 |---|---|---|
-| System admin | `admin@thecodeorigin.com` | `AdminPass1!` |
+| System admin | `contact@thecodeorigin.com` | `AdminPass1!` |
 | Org member | `alice@seed.local` | `Passw0rd!` |
 | Dynamic-role member | `bob@seed.local` | `Passw0rd!` |
 

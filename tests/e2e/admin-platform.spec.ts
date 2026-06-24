@@ -2,7 +2,7 @@
  * admin-platform.spec.ts — Admin-only platform pages
  * Covers: T-107 to T-127
  *
- * The admin user is admin@thecodeorigin.com (system role='admin').
+ * The admin user is contact@thecodeorigin.com (system role='admin').
  * Applications list is readable by all authenticated users; create/edit/delete are admin-only.
  * Consents and Users lists are sysadmin-only.
  *

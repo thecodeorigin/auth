@@ -27,7 +27,7 @@ function assert(label, actual, expected) {
 // Run as a standalone proof only when invoked directly (not when imported as a helper).
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('agent-proof.mjs')) {
   const ROLES = [
-    { role: 'admin', email: 'admin@thecodeorigin.com', sysAdmin: true },
+    { role: 'admin', email: 'contact@thecodeorigin.com', sysAdmin: true },
     { role: 'member', email: 'alice@seed.local', sysAdmin: false },
     { role: 'viewer', email: 'bob@seed.local', sysAdmin: false },
   ]

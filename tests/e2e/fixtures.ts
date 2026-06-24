@@ -6,7 +6,7 @@ export type AgentRole = 'admin' | 'member' | 'viewer'
  * `signInAs(role)` establishes a real session via the dev-only agent endpoint
  * (/api/_agent/sign-in) and lands the page authenticated. No password/MFA, so
  * automation is never blocked. Seeded role → user:
- *   admin  → admin@thecodeorigin.com (system admin)
+ *   admin  → contact@thecodeorigin.com (system admin)
  *   member → alice@seed.local        (subscriptions, NordPass Family owner)
  *   viewer → bob@seed.local          (project-viewer dynamic role)
  */
