@@ -6,7 +6,7 @@ import { z } from 'zod'
  *
  * Double-gated (security review, CRITICAL): the `import.meta.dev` constant is
  * statically `false` in production builds (handler body dead-code-eliminated, route
- * 404s) AND an explicit `NUXT_DEMO_MODE=true` opt-in is required — so a dev
+ * 404s) AND an explicit `NUXT_SANDBOX_MODE=true` opt-in is required — so a dev
  * running `pnpm dev` pointed at the live D1 still can't use it unless they opt in.
  *
  * Passwordless: looks the seeded user up by email and mints a session via the
@@ -27,8 +27,8 @@ const querySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  // NUXT_DEMO_MODE is coerced (destr) to a boolean — truthiness covers both.
-  if (!import.meta.dev || !useRuntimeConfig().demoMode)
+  // NUXT_SANDBOX_MODE is coerced (destr) to a boolean — truthiness covers both.
+  if (!import.meta.dev || !useRuntimeConfig().sandboxMode)
     throw createError({ statusCode: 404, statusMessage: 'Not found' })
 
   const { role, redirect, org } = await getValidatedQuery(event, querySchema.parse)

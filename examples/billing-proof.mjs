@@ -1,6 +1,6 @@
 // Billing/seat API proof: the account subscription, billing, and family-seat
 // routes behave correctly and are owner-scoped. Uses the dev agent endpoint for
-// auth (NUXT_AGENT_AUTH_ENABLED=true). Idempotent: adds a unique seat then removes it.
+// auth (NUXT_SANDBOX_MODE=true). Idempotent: adds a unique seat then removes it.
 import { agentLogin } from './agent-proof.mjs'
 
 const ORIGIN = process.env.IDP_ORIGIN || 'http://localhost:3000'

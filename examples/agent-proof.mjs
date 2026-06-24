@@ -1,6 +1,6 @@
 // Agent sign-in proof: the dev-only /api/_agent/sign-in endpoint establishes a
 // real session for each seeded role (so node + browser automation isn't blocked),
-// and refuses open redirects. Requires NUXT_AGENT_AUTH_ENABLED=true on the dev server.
+// and refuses open redirects. Requires NUXT_SANDBOX_MODE=true on the dev server.
 const ORIGIN = process.env.IDP_ORIGIN || 'http://localhost:3000'
 
 const setCookie = res => (res.headers.getSetCookie?.() ?? []).map(c => c.split(';')[0]).join('; ')
@@ -9,7 +9,7 @@ const setCookie = res => (res.headers.getSetCookie?.() ?? []).map(c => c.split('
 export async function agentLogin(role, redirect = '/') {
   const res = await fetch(`${ORIGIN}/api/_agent/sign-in?role=${role}&redirect=${encodeURIComponent(redirect)}`, { redirect: 'manual' })
   if (res.status !== 302)
-    throw new Error(`agent sign-in for ${role} expected 302, got ${res.status} (is NUXT_AGENT_AUTH_ENABLED=true?)`)
+    throw new Error(`agent sign-in for ${role} expected 302, got ${res.status} (is NUXT_SANDBOX_MODE=true?)`)
   const cookie = setCookie(res)
   if (!cookie.includes('session_token'))
     throw new Error(`agent sign-in for ${role} set no session cookie`)

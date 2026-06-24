@@ -49,7 +49,9 @@ export default defineServerAuth(({ runtimeConfig }) => {
 
   const polarClient = new Polar({
     accessToken: runtimeConfig.polarAccessToken,
-    server: 'sandbox',
+    // Sandbox mode uses a Polar sandbox token; production uses a production token —
+    // the server mode must match the token or Polar returns 401 invalid_token.
+    server: runtimeConfig.sandboxMode ? 'sandbox' : 'production',
   })
 
   return {
@@ -195,9 +197,9 @@ export default defineServerAuth(({ runtimeConfig }) => {
       openAPI(),
       polar({
         client: polarClient,
-        // Disabled in demo mode (NUXT_DEMO_MODE) so test email domains
+        // Disabled in sandbox mode (NUXT_SANDBOX_MODE) so test email domains
         // (example.com, mailinator.com …) don't hit Polar's MX-record validation.
-        createCustomerOnSignUp: !runtimeConfig.demoMode,
+        createCustomerOnSignUp: !runtimeConfig.sandboxMode,
         // Bind the Polar customer to our user id so webhooks resolve back to a user.
         // user.id may be undefined in onBeforeUserCreate (id is assigned by adapter.create).
         // Only include metadata.userId when it is a non-empty string; the onAfterUserCreate
