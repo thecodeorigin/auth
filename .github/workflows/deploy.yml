@@ -1,0 +1,69 @@
+name: Deploy (Cloudflare Workers)
+
+# Deploys the IdP to https://auth.thecodeorigin.com (Worker `thecodeorigin-auth`).
+# The ONLY GitHub secret used is DOPPLER_TOKEN (a read-only Doppler service token
+# scoped to project=auth, config=prd). Everything else — including the Cloudflare
+# credentials and all NUXT_* runtime vars — is pulled from Doppler at run time.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never run two production deploys at once.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.7.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
+      - name: Resolve Cloudflare credentials from Doppler
+        run: |
+          CF_TOKEN="$(doppler secrets get CLOUDFLARE_TOKEN --plain)"
+          CF_ACCOUNT="$(doppler secrets get CLOUDFLARE_ACCOUNT_ID --plain)"
+          echo "::add-mask::$CF_TOKEN"
+          echo "::add-mask::$CF_ACCOUNT"
+          # wrangler reads CLOUDFLARE_API_TOKEN, not CLOUDFLARE_TOKEN.
+          echo "CLOUDFLARE_API_TOKEN=$CF_TOKEN" >> "$GITHUB_ENV"
+          echo "CLOUDFLARE_ACCOUNT_ID=$CF_ACCOUNT" >> "$GITHUB_ENV"
+
+      - name: Build (Nuxt → cloudflare-module)
+        # doppler run injects every prd var, so build-time runtimeConfig (e.g.
+        # NUXT_PUBLIC_SITE_URL → the OIDC issuer) bakes with the production values.
+        run: doppler run -- pnpm build
+
+      - name: Apply D1 migrations (remote)
+        # wrangler can't match the DB by name in the generated config — use the binding.
+        run: pnpm exec wrangler d1 migrations apply DB --remote --config .output/server/wrangler.json
+
+      - name: Deploy Worker
+        run: pnpm exec wrangler deploy --config .output/server/wrangler.json
+
+      - name: Upsert Worker env vars (all Doppler vars except CF creds + Doppler metadata)
+        run: |
+          doppler secrets download --no-file --format json \
+            | jq 'del(.CLOUDFLARE_ACCOUNT_ID, .CLOUDFLARE_TOKEN, .DOPPLER_CONFIG, .DOPPLER_ENVIRONMENT, .DOPPLER_PROJECT)' \
+            > worker-secrets.json
+          pnpm exec wrangler secret bulk worker-secrets.json --config .output/server/wrangler.json
+          rm -f worker-secrets.json
