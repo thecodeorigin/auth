@@ -11,7 +11,11 @@ export default defineNitroPlugin(async (nitroApp) => {
   if (!rc.polarAccessToken || !ngrokAuthtoken)
     return // offline dev: skip silently (everything else still works)
 
-  const { connect } = await import('@ngrok/ngrok')
+  // Computed specifier + @vite-ignore so Rollup never bundles @ngrok/ngrok (native
+  // .node bindings can't compile for the Cloudflare Workers build). Dev-only: the
+  // import.meta.dev guard above means this line never runs in production.
+  const ngrokModule = '@ngrok/ngrok'
+  const { connect } = await import(/* @vite-ignore */ ngrokModule)
   const port = Number(process.env.NITRO_PORT || process.env.PORT || 3000)
   let listener: Awaited<ReturnType<typeof connect>>
   try {
