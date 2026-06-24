@@ -86,7 +86,7 @@ export async function subscriptionUpsertFromPolar(sub: {
   customer?: { external_id?: string | null, id?: string | null } | null
   metadata?: Record<string, unknown> | null
 }): Promise<void> {
-  const { polarPlanSlugForProduct } = await import('./polar-products')
+  const { polarPlanSlugForProduct } = await import('./polar')
   const userId = (sub.metadata?.userId as string | undefined) ?? sub.customer?.external_id ?? null
   const planSlug = (sub.metadata?.planSlug as string | undefined) ?? await polarPlanSlugForProduct(sub.product_id)
   if (!userId || !planSlug) {

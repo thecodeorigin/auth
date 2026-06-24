@@ -12,7 +12,7 @@ import { entitlementsResolve } from './services/entitlements'
 import { orgEnsurePersonal } from './services/org'
 import { subscriptionClearForUser, subscriptionUpsertFromPolar } from './services/subscription'
 import { sendEmail } from './utils/email'
-import { getDevWebhookSecret } from './utils/polar-webhook-secret'
+import { getDevWebhookSecret } from './utils/polar'
 
 /**
  * The Polar webhook payloads (`p.data`) are parsed SDK objects (camelCase, Date
@@ -206,7 +206,7 @@ export default defineServerAuth(({ runtimeConfig }) => {
         use: [
           checkout({
             // No static product list: checkout is per-product — the UI passes the
-            // Polar product id resolved at runtime (services/polar-products.ts).
+            // Polar product id resolved at runtime (services/polar.ts).
             successUrl: `${baseURL}/?checkout_id={CHECKOUT_ID}`,
             authenticatedUsersOnly: true,
           }),

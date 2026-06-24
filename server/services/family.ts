@@ -3,7 +3,7 @@ import { db } from '@nuxthub/db'
 import { subscription, subscriptionMember } from '@nuxthub/db/schema'
 import { and, eq, ne, sql } from 'drizzle-orm'
 import { planBySlug } from '#shared/catalog'
-import { polarSetSeats } from './polar-products'
+import { polarSetSeats } from './polar'
 
 export type AddSeatResult = 'added' | 'charged' | 'duplicate' | 'billing_unavailable' | 'not_seatable'
 
