@@ -1,0 +1,243 @@
+id,epic,user_story,role,preconditions,steps,expected_result,priority,automation,notes
+T-001,agent-sign-in,"As an admin, I want to sign in via the agent endpoint so that automated tests reach admin pages without a password flow",admin,"Dev environment running; seed:idp applied","1. Navigate to /api/auth/agent?role=admin&redirect=/platform/users
+2. Follow redirect chain","HTTP 302 to /platform/users; HttpOnly session cookie set; /platform/users renders the user list",P0,playwright,"Endpoint must be dev-only — T-004 verifies production 404"
+T-002,agent-sign-in,"As a member, I want to sign in via the agent endpoint so that automated tests access member pages instantly",member,"Dev environment running; seed:idp applied","1. Navigate to /api/auth/agent?role=member&redirect=/
+2. Follow redirect","Session cookie set; home dashboard renders with alice@seed.local product cards",P0,playwright,
+T-003,agent-sign-in,"As a viewer, I want to sign in via the agent endpoint so that viewer-role tests run without credential flow",viewer,"Dev environment running; seed:idp applied","1. Navigate to /api/auth/agent?role=viewer&redirect=/
+2. Follow redirect","Session cookie set; home dashboard loads without error",P1,playwright,
+T-004,agent-sign-in,"As a security engineer, I want the agent endpoint to return 404 in production so that credential bypass is never exposed in prod",anonymous,"Production environment (NODE_ENV=production)","1. GET /api/auth/agent?role=admin","HTTP 404; no session cookie created",P0,node-proof,"Security dispatch: dev-only bypass must never ship to prod"
+T-005,agent-sign-in,"As a tester, I want the agent endpoint to reject unknown roles so that test setup fails fast on misconfiguration",anonymous,"Dev environment running","1. GET /api/auth/agent?role=superuser","HTTP 400 or redirect to /sign-in; no authenticated session created",P1,node-proof,
+T-006,agent-sign-in,"As a member, I want the agent endpoint to honour the redirect param so that deep-link tests land on the correct page",member,"Dev environment running; seed:idp applied","1. Navigate to /api/auth/agent?role=member&redirect=/account/products/nordpass
+2. Follow redirect","Session set for alice@seed.local; browser is at /account/products/nordpass",P1,playwright,
+T-007,auth-session,"As a member, I want to sign in with a valid email and password so that I can access the portal",member,"Sign-out state; alice@seed.local exists","1. Navigate to /sign-in
+2. Enter email: alice@seed.local and password: Passw0rd!
+3. Click Continue","Redirect to /; home dashboard visible; user name or email displayed in sidebar footer",P0,playwright,
+T-008,auth-session,"As a user, I want to see an inline error when my password is wrong so that I understand why sign-in failed",member,"Sign-out state","1. Navigate to /sign-in
+2. Enter email: alice@seed.local and password: wrongpassword
+3. Click Continue","UAlert error message appears inline; no redirect; sign-in form remains visible",P0,playwright,
+T-009,auth-session,"As a user, I want to see an error when my email is not registered",anonymous,"Sign-out state","1. Navigate to /sign-in
+2. Enter email: notregistered@example.com and password: Passw0rd!
+3. Click Continue","Inline error shown; no redirect to /",P1,playwright,
+T-010,auth-session,"As a user, I want email field validation on the sign-in form so that I am guided on format errors before submission",anonymous,"Sign-out state","1. Navigate to /sign-in
+2. Submit with email field empty and password: Passw0rd!","Validation error 'Enter a valid email' appears below email field; no network request fired",P0,playwright,
+T-011,auth-session,"As a user, I want password required validation on the sign-in form",anonymous,"Sign-out state","1. Navigate to /sign-in
+2. Enter email: alice@seed.local; leave password empty
+3. Click Continue","Validation error 'Password is required' below password field; no network request fired",P0,playwright,
+T-012,auth-session,"As a user, I want email format validation on the sign-in form",anonymous,"Sign-out state","1. Navigate to /sign-in
+2. Enter email: notanemail and password: Passw0rd!
+3. Click Continue","Validation error 'Enter a valid email' shown; form not submitted",P1,playwright,
+T-013,auth-session,"As a new user, I want to register with name, email, and password so that I can create an account",anonymous,"Sign-out state; unique email available","1. Navigate to /sign-up
+2. Fill name: Test User; email: newuser123@example.com; password: Secure123
+3. Click Sign up","Sent state shown: heading 'Check your email' visible; email address shown in confirmation text",P0,playwright,
+T-014,auth-session,"As a new user, I want to see an error if I register with an already-registered email",anonymous,"alice@seed.local already registered","1. Navigate to /sign-up
+2. Fill name: Alice; email: alice@seed.local; password: Passw0rd!
+3. Click Sign up","Inline error shown indicating the email is already taken; form not submitted",P1,playwright,
+T-015,auth-session,"As a new user, I want name required validation on the sign-up form",anonymous,"Sign-out state","1. Navigate to /sign-up
+2. Leave name empty; fill email and password
+3. Click Sign up","Validation error 'Name is required' below Name field; no submission",P0,playwright,
+T-016,auth-session,"As a new user, I want password length validation on sign-up so that weak passwords are rejected",anonymous,"Sign-out state","1. Navigate to /sign-up
+2. Fill name: Test; email: test@example.com; password: short
+3. Click Sign up","Validation error 'At least 8 characters' below password field; form not submitted",P0,playwright,
+T-017,auth-session,"As a new user, I want email format validation on the sign-up form",anonymous,"Sign-out state","1. Navigate to /sign-up
+2. Fill name: Test; email: bademail; password: Secure123
+3. Click Sign up","Validation error 'Enter a valid email' shown",P0,playwright,
+T-018,auth-session,"As a new user who did not receive the verification email, I want a resend option so that I am not locked out",anonymous,"sign-up form submitted; sent state displayed","1. Click Resend email button","Success message 'Verification email re-sent.' appears; no error",P1,playwright,
+T-019,auth-session,"As a signed-in user, I want to sign out so that my session ends and I am redirected",member,"Signed in as alice@seed.local","1. Click user menu in sidebar footer
+2. Click Sign out","Redirect to /sign-in; session cookie cleared; navigating to / again redirects to /sign-in",P0,playwright,
+T-020,auth-session,"As an anonymous user, I want accessing / to redirect me to sign-in",anonymous,"Not authenticated","1. Navigate to /","Redirect to /sign-in",P0,playwright,
+T-021,auth-session,"As a user whose session just expired, I want a session-expired banner on the sign-in page",anonymous,"Not authenticated","1. Navigate to /sign-in?reason=session_expired","UAlert with title 'Your session expired' and warning color is visible above the form",P1,playwright,
+T-022,auth-session,"As a user, I want Google and GitHub social sign-in buttons on the sign-in page",anonymous,"Sign-out state","1. Navigate to /sign-in","Buttons 'Continue with Google' and 'Continue with GitHub' are visible below the email/password form",P1,playwright,
+T-023,auth-session,"As a user mid-OIDC-flow, I want sign-in to resume the OAuth authorize flow after authentication so that the RP completes the flow",anonymous,"Not authenticated; client_id present in query string","1. Navigate to /sign-in?client_id=NORDVPN_CLIENT&redirect_uri=https%3A%2F%2Fexample.com%2Fcb&response_type=code&scope=openid
+2. Sign in with alice@seed.local credentials","After sign-in redirect goes to /api/auth/oauth2/authorize?... (OIDC resume) and not to /",P0,playwright,
+T-024,auth-session,"As an admin, I want to impersonate a user so that I can debug their account experience",admin,"Signed in as admin@thecodeorigin.com; impersonation available on user detail page","1. Navigate to /platform/users
+2. Click view on alice row
+3. Click Impersonate","Impersonation banner visible at top of layout; document title starts with [Impersonating]; banner shows alice@seed.local email",P0,playwright,
+T-025,auth-session,"As an admin, I want to stop impersonating so that I return to my own admin session",admin,"Signed in and impersonating alice@seed.local","1. Click Stop in impersonation banner","Banner disappears; session restored to admin@thecodeorigin.com; title prefix removed; sidebar shows admin nav items",P0,playwright,
+T-026,auth-session,"As a member, I want to update my profile name and see the change reflected immediately",member,"Signed in as alice via agent endpoint","1. Navigate to /account/profile
+2. Change name to Alice Updated
+3. Click Save changes","Toast 'Profile updated'; name in form reflects new value; sidebar user display updated",P1,playwright,
+T-027,auth-session,"As a member, I want the email and account ID fields on the profile page to be read-only",member,"Signed in as alice","1. Navigate to /account/profile","Email field is disabled; Account ID field is disabled; no editing possible for these fields",P1,playwright,
+T-028,auth-session,"As a member, I want to change my password from the Security page with cross-field validation",member,"Signed in as alice via agent","1. Navigate to /account/security
+2. Enter current: Passw0rd!; new: NewSecure1; confirm: DifferentPass
+3. Click Update password","Validation error 'Passwords do not match' on confirm field; password not changed",P0,playwright,
+T-029,auth-session,"As a member, I want to successfully change my password when current password and confirm match",member,"Signed in as alice via agent","1. Navigate to /account/security
+2. Enter current: Passw0rd!; new: NewPass123; confirm: NewPass123
+3. Click Update password","Toast 'Password changed'; other sessions revoked; form cleared",P1,playwright,
+T-030,auth-session,"As a member, I want to revoke other active sessions from the Security page",member,"Signed in as alice; another session exists","1. Navigate to /account/security
+2. Wait for sessions table to load
+3. Click Revoke all others","Other sessions removed from list; toast 'Other sessions revoked'; current session remains marked as 'Current'",P1,playwright,
+T-031,oidc-sso,"As a registered OIDC client, I want a single user sign-in to authenticate all clients without re-prompting for credentials",member,"IdP running; .clients.json populated via seed:idp; alice credentials valid","1. POST /api/auth/sign-in/email with alice credentials — store session cookie
+2. For each client in .clients.json run authorize + token exchange","All clients receive authorization code and exchange for token successfully; none cause a redirect to /sign-in; pass count = total client count",P0,node-proof,"Mirrors sso-proof.mjs — the defining SSO acceptance criterion"
+T-032,oidc-sso,"As an OIDC relying party, I want id_tokens with standard claims and RS256 algorithm",member,"Alice signed in; id_token obtained for any client","1. Decode id_token JWT header
+2. Decode id_token JWT payload","alg=RS256 in header; sub claim present; iss matches IdP origin; aud matches requesting client_id",P0,node-proof,
+T-033,oidc-sso,"As a confidential OIDC client, I want to authenticate at the token endpoint using HTTP Basic auth",member,"Authorization code obtained for a confidential client","1. POST /api/auth/oauth2/token with Authorization: Basic base64(clientId:secret) header","HTTP 200; access_token and id_token in response body",P0,node-proof,
+T-034,oidc-sso,"As a public OIDC client, I want to authenticate at the token endpoint using client_id in the request body",member,"Authorization code and code_verifier available for public client","1. POST /api/auth/oauth2/token with client_id in body; code_verifier present; no Authorization header","HTTP 200; access_token and id_token returned",P0,node-proof,
+T-035,oidc-sso,"As a security engineer, I want public clients that omit code_verifier to be rejected",member,"Authorization code obtained for public client; intentionally omitting code_verifier","1. POST /api/auth/oauth2/token for public client with no code_verifier","HTTP 400; token not issued; error response in body",P0,node-proof,"Security: PKCE enforcement is mandatory for public clients"
+T-036,oidc-sso,"As a public OIDC client, I want PKCE with the correct code_verifier to succeed",member,"PKCE verifier and S256 challenge computed before authorize","1. Authorize with code_challenge=S256(verifier)
+2. Exchange code with matching code_verifier","HTTP 200; id_token issued",P0,node-proof,
+T-037,oidc-sso,"As a security engineer, I want authorization codes to be single-use",member,"Authorization code obtained","1. Exchange code once — succeeds
+2. Exchange the same code again","Second exchange returns HTTP 400 or 401; code reuse rejected; no duplicate token issued",P0,node-proof,"Security: prevent authorization code replay"
+T-038,oidc-sso,"As an OIDC relying party, I want already-authenticated sessions to be accepted without re-prompting",member,"Alice signed in; session cookie present","1. Authorize for client A — receive code
+2. Immediately authorize for client B with same session cookie","Client B receives authorization code without any redirect to /sign-in",P0,node-proof,"Core SSO invariant — second authorize must not prompt for credentials"
+T-039,oidc-sso,"As an Express RP, I want to complete the OIDC authorization code flow end-to-end",member,"examples/express/ RP configured; seed:idp applied","1. Start Express RP
+2. Navigate to RP home; click login
+3. Sign in at IdP; callback completes","Express RP renders alice profile from id_token claims; session established at RP",P1,playwright,
+T-040,oidc-sso,"As a Vue SPA (public client), I want to complete a PKCE-based OIDC flow without a client secret",member,"examples/vue/ SPA configured as public client in .clients.json","1. Open Vue SPA
+2. Click login (SPA generates PKCE verifier+challenge)
+3. Sign in at IdP
+4. Callback with code; SPA exchanges with code_verifier","Vue SPA renders alice profile; no client_secret used in any request",P0,playwright,
+T-041,authz-scoping,"As a NordVPN OIDC client, I want id_token.org to be the org where alice has a tier-0 NordVPN access grant (Org B)",member,"seed:authz-fixtures applied; alice in Org B with viewer grant scoped to NordVPN client","1. Obtain id_token for NordVPN client
+2. Decode id_token payload","org claim = Org B id; tier-0 exact grant wins over personal wildcard grant",P0,node-proof,"Mirrors authz-proof.mjs AC3"
+T-042,authz-scoping,"As a NordVPN OIDC client, I want id_token.roles to reflect alice's viewer role in Org B",member,"seed:authz-fixtures applied","1. Obtain id_token for NordVPN client
+2. Inspect roles claim","roles = 'viewer'",P0,node-proof,
+T-043,authz-scoping,"As a Nord Web OIDC client, I want id_token.org to be alice's personal org because Org B has no Nord Web grant (default-closed)",member,"seed:authz-fixtures applied; Org B has no Nord Web access row","1. Obtain id_token for Nord Web client
+2. Inspect org claim","org = personal org id; org is NOT Org B id; default-closed deny works",P0,node-proof,"Mirrors authz-proof.mjs AC4"
+T-044,authz-scoping,"As a Nord Web OIDC client, I want id_token.personal = true when the resolved org is alice's personal org",member,"seed:authz-fixtures applied","1. Obtain id_token for Nord Web client","personal claim = true in decoded id_token payload",P0,node-proof,
+T-045,authz-scoping,"As a security engineer, I want default-closed to mean no org or roles claims in id_token when no access grant exists for that client",member,"No access grant exists between alice and the test client","1. Register a new client with no access grants
+2. Obtain id_token for that client","id_token payload lacks org and roles claims; no org context leaked",P0,node-proof,"Security: default-closed deny — no implicit disclosure"
+T-046,authz-scoping,"As an OIDC client, I want the personal org wildcard grant to serve as a fallback when no exact-match grant exists",member,"alice personal org has '*' wildcard grant","1. Obtain id_token for a client that only matches the wildcard grant","org = personal org id; personal = true",P1,node-proof,
+T-047,authz-scoping,"As a dynamic-role user (bob), I want my custom project-viewer role to appear in id_token claims",member,"bob@seed.local has role project-viewer in an org; seed:idp applied","1. Sign in as bob
+2. Obtain id_token for a client with access to that org","roles claim includes 'project-viewer'",P1,node-proof,
+T-048,entitlements,"As a NordPass OIDC client, I want userinfo.entitlement.product = 'nordpass' for alice",member,"seed:subscriptions applied; alice has active NordPass sub; NordPass client registered","1. Obtain access_token for NordPass client
+2. GET /api/auth/oauth2/userinfo with Bearer token","Response body contains entitlement.product = 'nordpass'",P0,node-proof,"Mirrors entitlement-proof.mjs"
+T-049,entitlements,"As a NordPass OIDC client, I want userinfo.entitlement.active = true for alice's active NordPass subscription",member,"alice has active nordpass-premium or nordpass-family sub","1. Obtain access_token for NordPass client
+2. GET userinfo","entitlement.active = true",P0,node-proof,
+T-050,entitlements,"As a NordVPN OIDC client, I want userinfo.entitlement.active = false when alice's NordVPN subscription is expired",member,"alice has expired nordvpn-complete sub (seeded Dec 14 2023)","1. Obtain access_token for NordVPN client
+2. GET userinfo","entitlement.product = 'nordvpn'; entitlement.active = false",P0,node-proof,
+T-051,entitlements,"As a relying party, I want entitlement returned with active=false for an expired subscription rather than the field being absent",member,"Expired sub exists for the requesting client's product","1. Obtain access_token for the matching client
+2. GET userinfo","entitlement object present with active=false; not null/absent from response",P1,node-proof,
+T-052,entitlements,"As a relying party, I want entitlement to be absent when the user has no subscription for my product",member,"alice has no active or expired subscription that maps to the requesting client","1. Obtain access_token for a client whose product alice has never subscribed to
+2. GET userinfo","entitlement key absent or null in userinfo response",P1,node-proof,
+T-053,entitlements,"As a NordLocker client, I want userinfo.entitlement to reflect the free-tier active status",member,"alice has active nordlocker-free sub","1. Obtain access_token for NordLocker client
+2. GET userinfo","entitlement.product = 'nordlocker'; entitlement.active = true",P1,node-proof,
+T-054,entitlements,"As a relying party, I want entitlement accessible only via userinfo and not baked into the id_token payload",member,"Access token obtained for any client","1. Obtain id_token
+2. Decode id_token payload","id_token payload does NOT contain an entitlement key",P1,node-proof,"Keep id_tokens slim; entitlement is userinfo-only"
+T-055,home-dashboard,"As a member, I want to see product cards for my subscriptions on the home dashboard",member,"Signed in as alice@seed.local via agent; seed:subscriptions applied","1. Navigate to /
+2. Wait for async data to load","SubscriptionProductCard components visible for each of alice's seeded subscriptions (nordvpn-complete, dark-web-monitor, nordpass-premium, nordpass-family, nordlocker-free)",P0,playwright,
+T-056,home-dashboard,"As a member with an expired subscription, I want an expiry banner on the home dashboard",member,"alice has expired nordvpn-complete sub; signed in as alice","1. Navigate to /","SubscriptionExpiryBanner card visible; NordVPN icon shown; text contains 'subscription has expired'",P0,playwright,
+T-057,home-dashboard,"As a member, I want the expiry banner Renew button to navigate to the correct product page",member,"Expiry banner visible on /","1. Click Renew button in expiry banner","Browser navigates to /account/products/nordvpn",P0,playwright,
+T-058,home-dashboard,"As a member with no subscriptions, I want an empty state with a Browse plans link",member,"Signed in as a user with zero subscriptions","1. Navigate to /","Text 'You don't have any products yet.' visible; 'Browse plans' link href = /account/plans",P1,playwright,
+T-059,home-dashboard,"As a member, I want the Account settings card to link to /account/profile",member,"Signed in as alice","1. Navigate to /
+2. Click Manage account link in sidebar card","Navigates to /account/profile",P1,playwright,
+T-060,home-dashboard,"As a member, I want the Available plans card to link to /account/plans",member,"Signed in as alice","1. Navigate to /
+2. Click View plans link in sidebar card","Navigates to /account/plans",P1,playwright,
+T-061,home-dashboard,"As any user, I want the home page navbar title to read Home",member,"Signed in","1. Navigate to /","DashboardNavbar shows title 'Home'",P2,playwright,
+T-062,home-dashboard,"As an admin with seeded subscriptions, I want the home page to show subscription cards just like a member",admin,"Signed in as admin@thecodeorigin.com via agent; seed:subscriptions applied for admin email","1. Navigate to /","Product cards rendered for admin's seeded subscriptions; expiry banner shown for expired subs",P1,playwright,"seed:subscriptions seeds both alice and admin@thecodeorigin.com"
+T-063,product-page,"As a member, I want the Go-to-product card to appear for NordVPN because it has an appUrl",member,"Signed in as alice via agent","1. Navigate to /account/products/nordvpn","UCard with 'Go to product' button visible; button href = https://nordvpn.com; target=_blank",P0,playwright,
+T-064,product-page,"As a member, I want the Go-to-product card to be absent for Dark Web Monitor because its appUrl is null",member,"Signed in as alice","1. Navigate to /account/products/dark-web-monitor","No 'Go to product' card or button rendered on page",P0,playwright,"dark-web-monitor has appUrl=null in catalog"
+T-065,product-page,"As a member with an expired NordVPN subscription, I want the plan card to show No active plan and a Buy now button",member,"alice nordvpn-complete sub is expired; signed in as alice","1. Navigate to /account/products/nordvpn","Plan card text = 'No active plan'; 'Buy now' button visible; no 'Manage plan' button",P0,playwright,
+T-066,product-page,"As a member with an active paid NordPass plan, I want the plan card to show the plan name and a Manage plan button",member,"alice has active nordpass-premium or nordpass-family; signed in as alice","1. Navigate to /account/products/nordpass","Plan card shows 'active' label and the plan name; 'Manage plan' button visible; no 'Buy now' or 'Upgrade' button",P0,playwright,
+T-067,product-page,"As a member on the NordLocker free tier, I want the plan card to show Free plan active and an Upgrade button",member,"alice has active nordlocker-free sub; no paid nordlocker sub; signed in as alice","1. Navigate to /account/products/nordlocker","Plan card text = 'Free plan active'; 'Upgrade' button visible (not 'Buy now'); no 'Manage plan'",P0,playwright,
+T-068,product-page,"As a member, I want the Members card to appear when I have any subscription (free or paid)",member,"alice has active nordlocker-free sub","1. Navigate to /account/products/nordlocker","SubscriptionMembersCard rendered on page",P0,playwright,
+T-069,product-page,"As a member with no subscription for a product, I want the Members card to be absent",member,"User with no nordvpn subscription visits nordvpn product page","1. Navigate to /account/products/nordvpn as admin (admin has expired sub → tier=none)","Members card NOT rendered; tier resolves to 'none'",P0,playwright,"expired sub means isActive=false; paidSub=null; freeSub=null; tier='none'"
+T-070,product-page,"As a member on a multi-seat paid plan, I want the Add seat button to appear in the Members card",member,"alice has active nordpass-family (6 seats, paid); signed in as alice","1. Navigate to /account/products/nordpass
+2. Observe Members card header","Add seat button (i-lucide-plus icon + label) is visible in Members card header; canAddSeat=true",P0,playwright,
+T-071,product-page,"As a member on a single-seat paid plan, I want the Add seat button to be absent",member,"User has an individual paid plan with seats=1","1. Navigate to product page for that individual plan","Members card visible; no Add seat button; seatCapable=false",P1,playwright,
+T-072,product-page,"As a member on the free tier with a paid upgrade available, I want an upgrade hint in the Members card",member,"alice has nordlocker-free; nordlocker-premium exists in catalog","1. Navigate to /account/products/nordlocker","Members card shows text 'Upgrade to a paid plan to add members'; no Add seat button",P1,playwright,
+T-073,product-page,"As a user, I want navigating to an unknown product slug to not throw a JS error",member,"Signed in as alice","1. Navigate to /account/products/does-not-exist","Page renders without JS console error; product computed = undefined; body area is empty or shows fallback",P2,playwright,
+T-074,product-page,"As a member, I want the Plans page to show all 6 catalog plans with names, prices, and features",member,"Signed in as alice","1. Navigate to /account/plans","6 UCard elements; each shows plan name, formatted price, billing interval label, feature list, and View product button",P1,playwright,
+T-075,product-page,"As a member, I want the Buy now button to be disabled with a warning when Polar is not configured",member,"polarConfigured=false returned by /api/billing/config","1. Navigate to any product page that has a paidPlan but Polar not configured","Buy now or Upgrade button is disabled; warning text 'Purchasing is unavailable in this environment.' visible",P1,playwright,
+T-076,members-seats,"As a subscription owner, I want to always see myself as the owner row in the Members card",member,"alice is subscription owner; signed in as alice","1. Navigate to /account/products/nordpass
+2. Wait for Members card to load","Owner row shows alice@seed.local email; status label 'Plan owner' visible",P0,playwright,
+T-077,members-seats,"As a subscription owner, I want the Members card header to display the current count and total seats",member,"alice has nordpass-family (6 seats) with 6/6 members","1. Navigate to /account/products/nordpass","Header reads 'Members (6/6)'",P0,playwright,
+T-078,members-seats,"As a subscription owner, I want to search members by email substring",member,"NordPass Family has members including quangtudng@gmail.com","1. Navigate to /account/products/nordpass
+2. Type 'quang' in search input","Only members whose email contains 'quang' are shown; other members hidden",P1,playwright,
+T-079,members-seats,"As a subscription owner, I want search to be case-insensitive",member,"Member email: Hao100319@gmail.com","1. Type 'HAO' in search input","Row with hao100319@gmail.com appears in results",P1,playwright,
+T-080,members-seats,"As a subscription owner, I want 'No members found' shown when search yields no results",member,"alice on nordpass family","1. Type 'zzznomatch' in search input","Text 'No members found.' appears; member rows hidden; pagination hidden",P1,playwright,
+T-081,members-seats,"As a subscription owner, I want pagination to appear when there are more than 8 members",member,"Subscription has 9 or more family members seeded","1. Navigate to product page","UPagination component visible in card footer; exactly 8 rows on page 1",P2,playwright,
+T-082,members-seats,"As a subscription owner, I want the page to reset to 1 when I change the search query",member,"On page 2 of members list","1. Change search query","Pagination resets to page 1; filtered set shown from beginning",P2,playwright,
+T-083,members-seats,"As a subscription owner, I want to add a new family seat",member,"alice owns nordpass-family; a free seat available; no subscription at full capacity","1. Navigate to /account/products/nordpass
+2. Click Add seat
+3. Enter email: newseat@example.com in modal
+4. Click Add seat in modal","Modal closes; toast 'Member added'; newseat@example.com row appears in list; member count incremented",P0,playwright,
+T-084,members-seats,"As a subscription owner, I want the Add seat confirm button to be disabled when email is empty",member,"Add seat modal open","1. Open Add seat modal
+2. Clear email field
+3. Observe Add seat button","Add seat button is disabled; cannot submit",P0,playwright,
+T-085,members-seats,"As a subscription owner, I want a prorated charge toast when adding beyond included seats",member,"Polar-backed subscription at seat capacity; Polar billing configured","1. Click Add seat; enter new email; submit","Toast 'Seat added — your card was charged a prorated amount'; member appears in list",P1,playwright,"Requires live Polar integration"
+T-086,members-seats,"As a subscription owner, I want a clear error toast when adding a duplicate email",member,"member@example.com already in the subscription","1. Open Add seat modal
+2. Enter already-present email
+3. Submit","Error toast 'This person is already a member'; list unchanged; count unchanged",P0,playwright,
+T-087,members-seats,"As a subscription owner, I want a validation error when submitting an invalid email format via API",member,"Valid subscription ID available","1. POST /api/account/family/:subId/members with body email: notanemail","HTTP 400; Zod validation error in response body; no member added",P0,node-proof,
+T-088,members-seats,"As a subscription owner, I want the Enter key in the email input to submit the Add seat form",member,"Add seat modal open; valid email entered","1. Press Enter in the email input field","Form submits; same outcome as clicking the Add seat button",P1,playwright,
+T-089,members-seats,"As a subscription owner, I want to remove a non-owner member from the family plan",member,"alice owns nordpass-family; longnt189@gmail.com is a member","1. Navigate to /account/products/nordpass
+2. Click Remove next to longnt189@gmail.com","Member removed; list refreshes; count decrements; no error toast",P0,playwright,
+T-090,members-seats,"As a subscription owner, I want the owner row to have no Remove button",member,"Members card loaded with owner row visible","1. Inspect owner row in Members card","No Remove button rendered in the owner row",P0,playwright,
+T-091,members-seats,"As a security engineer, I want cross-tenant access to another user's subscription members to be forbidden",member,"bob signed in via agent; alice's subscriptionId known","1. GET /api/account/family/:aliceSubId/members with bob's session","HTTP 403; no member data returned",P0,node-proof,"Security: requireOwnedSubscription server guard"
+T-092,members-seats,"As a security engineer, I want cross-tenant member deletion to be rejected",member,"bob signed in; alice's subscriptionId and a memberId known","1. DELETE /api/account/family/:aliceSubId/members/:memberId with bob's session","HTTP 403; member not deleted",P0,node-proof,"Security: requireOwnedSubscription server guard"
+T-093,members-seats,"As a subscription owner, I want a 409 error when adding a member to a non-seatable individual plan",member,"Subscription has a plan with seats=1","1. POST /api/account/family/:subId/members with a valid email","HTTP 409; statusMessage = 'This plan does not support additional seats'",P1,node-proof,
+T-094,members-seats,"As a subscription owner, I want a 503 error and user-friendly toast when billing is unavailable during seat addition",member,"Polar billing service unavailable (mock or env var unset)","1. Attempt to add a seat that requires a Polar charge
+2. Observe response","HTTP 503; error toast 'Billing is temporarily unavailable — try again shortly'",P1,playwright,
+T-095,billing,"As a member with a paid Polar subscription, I want clicking Manage plan to redirect me to the Polar customer portal",member,"alice has active polar-sourced NordPass subscription; Polar configured","1. Navigate to /account/products/nordpass
+2. Click Manage plan","Browser redirects to Polar portal URL; loading spinner shown on button while request is in flight",P0,playwright,
+T-096,billing,"As a member, I want a user-friendly error toast when the billing portal URL cannot be retrieved",member,"Portal API returns 502 or 503","1. Navigate to /account/products/nordpass
+2. Click Manage plan","Error toast with message from statusMessage or fallback; page stays loaded; no blank screen",P0,playwright,
+T-097,billing,"As a member, I want clicking Buy now to redirect to the Polar checkout page",member,"alice has no active NordVPN paid sub; Polar configured with nordvpn product","1. Navigate to /account/products/nordvpn
+2. Click Buy now","Browser redirects to Polar checkout URL",P0,playwright,
+T-098,billing,"As a member, I want clicking Upgrade to redirect to Polar checkout for the primary paid plan",member,"alice has nordlocker-free; Polar configured with nordlocker-premium product","1. Navigate to /account/products/nordlocker
+2. Click Upgrade","Browser redirects to Polar checkout URL for nordlocker-premium",P0,playwright,
+T-099,billing,"As a member, I want a loading spinner on the checkout and manage buttons during async operations to prevent double-submit",member,"Polar configured; network latency observable","1. Click Buy now or Manage plan
+2. Observe button state before redirect","Button shows loading indicator; button is not re-clickable until operation completes or fails",P1,playwright,
+T-100,billing,"As an unauthenticated user, I want the billing portal API to return 401",anonymous,"Not authenticated","1. GET /api/billing/portal without session cookie","HTTP 401; no portal URL returned",P0,node-proof,"Server-side requireUserSession guard"
+T-101,billing,"As a member, I want /api/billing/config to return polarConfigured=false when Polar is not set up",member,"POLAR_ACCESS_TOKEN env var not set; signed in as alice","1. GET /api/billing/config","Response body: { polarConfigured: false, products: {} }",P1,node-proof,
+T-102,freemium,"As a member on the NordLocker free tier, I want the plan card to show Free plan active",member,"alice has active nordlocker-free sub; no paid nordlocker sub; signed in as alice","1. Navigate to /account/products/nordlocker","Plan card text reads 'Free plan active'; tier resolves to 'free'",P0,playwright,
+T-103,freemium,"As a member on the NordLocker free tier, I want the Members card to be rendered (tier is free, not none)",member,"alice has nordlocker-free active","1. Navigate to /account/products/nordlocker","SubscriptionMembersCard present on page",P0,playwright,
+T-104,freemium,"As a free-tier NordLocker member, I want the Add seat button to be absent because canAddSeat=false on free tier",member,"nordlocker-free active; tier='free'; seatCapable check: nordlocker-free has seats=1","1. Navigate to /account/products/nordlocker
+2. Inspect Members card","No Add seat button; upgradeHint text 'Upgrade to a paid plan to add members' shown",P0,playwright,
+T-105,freemium,"As a member, I want NordLocker Free to display as 'Free' with no billing interval on the plans page",member,"Signed in as alice","1. Navigate to /account/plans","NordLocker Free card shows price 'Free'; no /month or /year suffix; billingInterval='none' handled correctly",P1,playwright,
+T-106,freemium,"As a member with NordLocker free, I want the Upgrade button to work when Polar is configured",member,"Polar configured with nordlocker-premium product; alice on free tier","1. Navigate to /account/products/nordlocker
+2. Click Upgrade","Redirect to Polar checkout for nordlocker-premium",P1,playwright,
+T-107,admin-platform,"As an admin, I want /platform/* navigation items to appear in the sidebar",admin,"Signed in as admin@thecodeorigin.com via agent","1. Navigate to /","Sidebar shows admin-gated nav items (Applications, Users, Organizations, Consents) not visible to members",P0,playwright,
+T-108,admin-platform,"As a member, I want /platform/* nav items to be hidden in my sidebar",member,"Signed in as alice via agent","1. Navigate to /","Sidebar does NOT show Applications link under admin section; no admin nav group rendered",P0,playwright,
+T-109,admin-platform,"As an admin, I want to browse all users at /platform/users",admin,"Signed in as admin via agent","1. Navigate to /platform/users","User list loads with columns Name, Role (badge), Status (badge); infinite scroll enabled",P0,playwright,
+T-110,admin-platform,"As an admin, I want to search users by name or email",admin,"On /platform/users","1. Type 'alice' in search input","List filters to show alice@seed.local; other users hidden",P1,playwright,
+T-111,admin-platform,"As an admin, I want to create a new user via modal",admin,"On /platform/users","1. Click New user
+2. Fill required fields in modal
+3. Submit","Modal closes; new user appears in list; success toast or list reloads",P1,playwright,
+T-112,admin-platform,"As a member, I want accessing /platform/users to be blocked by the sysadmin middleware",member,"Signed in as alice","1. Navigate to /platform/users","Redirect to /sign-in or /403; user list not rendered",P0,playwright,
+T-113,admin-platform,"As an admin, I want to see all OIDC applications at /platform/applications",admin,"Signed in as admin; seed:idp applied","1. Navigate to /platform/applications","Applications table renders with Name, Client ID, Status columns; Edit and Delete action buttons visible for admin",P0,playwright,
+T-114,admin-platform,"As a member, I want to see the applications list without Create, Edit, or Delete controls",member,"Signed in as alice","1. Navigate to /platform/applications","Applications table renders; no Create Application button in header; no action column with edit/delete",P1,playwright,"Applications list read is open to all authenticated users per code comment"
+T-115,admin-platform,"As an admin, I want to create a new application and see the client secret shown exactly once",admin,"Signed in as admin via agent; on /platform/applications/new","1. Enter name: E2E Test App; type: web; redirect URI: https://app.test/callback
+2. Click Create application","Application created; secret modal opens with client_id and client_secret displayed; after acknowledging redirect to application detail",P0,playwright,
+T-116,admin-platform,"As an admin, I want a validation error when creating an application with an empty name",admin,"On /platform/applications/new","1. Leave name field empty
+2. Click Create application","UAlert shows error 'Name is required.'; no API call made",P0,playwright,
+T-117,admin-platform,"As an admin, I want a validation error for a redirect URI containing a URL fragment",admin,"On /platform/applications/new","1. Enter name; add redirect URI: https://app.test/callback#fragment
+2. Click Create application","Error 'Redirect URI must not contain a fragment (#)' shown in UAlert list",P0,playwright,
+T-118,admin-platform,"As an admin, I want a validation error for a relative redirect URI",admin,"On /platform/applications/new","1. Enter redirect URI: /callback (relative path)
+2. Click Create application","Error 'Invalid absolute URL' shown",P0,playwright,
+T-119,admin-platform,"As an admin, I want to confirm before deleting an application and be able to cancel",admin,"On /platform/applications; at least one app present","1. Click Delete icon on any app row
+2. Click Cancel in the confirm dialog","Dialog closes; application remains in list; no delete request fired",P1,playwright,
+T-120,admin-platform,"As an admin, I want to delete an application after confirmation",admin,"On /platform/applications; at least one app present","1. Click Delete icon on an app
+2. Confirm in dialog","Application removed from list; success toast 'Application deleted'",P0,playwright,
+T-121,admin-platform,"As an admin, I want to see all OAuth consents at /platform/consents",admin,"Signed in as admin; some consents exist (alice authorized NordVPN)","1. Navigate to /platform/consents","Consent list renders with User, Application, Scopes, Consented date, and Revoke button columns",P0,playwright,
+T-122,admin-platform,"As a member, I want accessing /platform/consents to be blocked",member,"Signed in as alice","1. Navigate to /platform/consents","Redirect to /sign-in or /403; consent data not shown",P0,playwright,
+T-123,admin-platform,"As an admin, I want to revoke a consent with confirmation",admin,"On /platform/consents; at least one consent exists","1. Click Revoke on a consent row
+2. Confirm in dialog","Consent removed from list; toast 'Consent revoked'",P0,playwright,
+T-124,admin-platform,"As an admin, I want to cancel a consent revocation",admin,"On /platform/consents","1. Click Revoke; click Cancel in dialog","Consent remains in list; no API call made",P1,playwright,
+T-125,admin-platform,"As a security engineer, I want the admin consents API to require admin role",member,"Signed in as alice (not admin)","1. GET /api/admin/consents with alice session","HTTP 403; consent data not returned",P0,node-proof,"Server-side requireAdmin guard"
+T-126,admin-platform,"As a security engineer, I want the admin consent delete API to require admin role",member,"Signed in as alice","1. DELETE /api/admin/consents/:id with alice session","HTTP 403; consent not deleted",P0,node-proof,
+T-127,admin-platform,"As an admin, I want to search consents by user or application name",admin,"On /platform/consents; multiple consents exist","1. Type partial email or app name in search field","Table filtered to matching rows; non-matching rows hidden",P1,playwright,
+T-128,admin-platform,"As an admin, I want to grant per-application access to an org member from the App Access page",admin,"Signed in as admin; org with members exists; applications seeded","1. Navigate to /orgs/:slug/app-access
+2. Select a member
+3. Select NordVPN from application dropdown; choose role: viewer
+4. Click Grant","Toast 'Access granted'; grant row appears in the Current grants table",P0,playwright,
+T-129,admin-platform,"As an admin, I want to revoke an app-access grant with confirmation for wildcard grants",admin,"Grant with clientId='*' exists for a member","1. Click Revoke on the 'All Applications' grant row
+2. Confirm in prompt","Grant removed from table; toast 'Access revoked'",P1,playwright,"Wildcard revoke shows a confirm prompt per code"
+T-130,permission-matrix,"As an anonymous user, I want every authenticated route to redirect me to sign-in",anonymous,"Not authenticated","1. Navigate to /account/products/nordpass","Redirect to /sign-in; product page not rendered",P0,playwright,
+T-131,permission-matrix,"As an anonymous user, I want /platform/users to redirect me to sign-in",anonymous,"Not authenticated","1. Navigate to /platform/users","Redirect to /sign-in",P0,playwright,
+T-132,permission-matrix,"As a member, I want /platform/consents to be inaccessible to me",member,"Signed in as alice","1. Navigate to /platform/consents","Redirect or 403 page; no consent data visible to member",P0,playwright,
+T-133,permission-matrix,"As a security engineer, I want alice to be unable to access another user's family subscription member list via the API",member,"Signed in as alice; bob's subscriptionId known","1. GET /api/account/family/:bobSubId/members with alice session","HTTP 403; member data not exposed",P0,node-proof,"Security: ownership enforcement on family routes"
+T-134,permission-matrix,"As an admin impersonating alice, I want to see alice's subscription data",admin,"Admin signed in and impersonating alice@seed.local","1. Impersonate alice
+2. Navigate to /account/products/nordpass","alice's subscriptions render; impersonation banner visible; title prefix [Impersonating] present",P0,playwright,
+T-135,permission-matrix,"As a security engineer, I want destructive admin actions to be disabled during impersonation",admin,"Admin impersonating alice; on an admin page that has destructive controls","1. Observe admin-only destructive controls while impersonating","Destructive admin buttons are disabled or hidden during impersonation; banner reflects lockout",P0,playwright,"Hard rule 7: impersonation lockout for destructive actions"
+T-136,permission-matrix,"As a security engineer, I want the /api/billing/portal endpoint to reject unauthenticated requests",anonymous,"Not authenticated","1. GET /api/billing/portal without session","HTTP 401; no portal URL leaked",P0,node-proof,
+T-137,permission-matrix,"As a security engineer, I want the /api/account/subscriptions endpoint to reject unauthenticated requests",anonymous,"Not authenticated","1. GET /api/account/subscriptions without session","HTTP 401; no subscription data returned",P0,node-proof,
+T-138,org-management,"As an org owner, I want to invite a member with a chosen role",member,"Signed in as alice; alice is owner of personal org; on /orgs/:slug/members","1. Click Invite member
+2. Enter email: invite@example.com; select role: member
+3. Click Send invite","Toast 'Invitation sent'; invite appears in invitations list",P0,playwright,
+T-139,org-management,"As an org owner, I want invite to fail with an error for a blank email",member,"Invite modal open","1. Leave email empty
+2. Click Send invite","Send invite button disabled when email is blank; no submission",P0,playwright,"Button has :disabled='!inviteEmail.trim()' check"
+T-140,org-management,"As an org admin, I want to change a non-owner member's role",member,"alice is owner; bob is member in alice's org; canUpdate=true","1. Click ellipsis menu on bob's row
+2. Click Make admin","Toast 'Role updated'; bob's badge changes to 'admin'",P1,playwright,
+T-141,org-management,"As an org owner, I want to be unable to remove myself when I am the last owner",member,"alice is sole owner of org","1. Click ellipsis menu on alice's own row","No Remove option shown; no role-change options for last owner",P0,playwright,"isLastOwner guard in code"
+T-142,org-management,"As an org owner, I want to remove a non-owner member from the org",member,"alice is owner; carol is a member; canRemove=true","1. Click ellipsis menu on carol's row
+2. Click Remove","Toast 'Member removed'; carol removed from table",P1,playwright,

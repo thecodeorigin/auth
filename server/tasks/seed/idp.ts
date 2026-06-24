@@ -39,7 +39,9 @@ export default defineTask({
       await adapter.update({
         model: 'user',
         where: [{ field: 'id', value: found.id }],
-        update: { emailVerified: true, updatedAt: now, ...(role ? { role } : {}) },
+        // Also reset `name` so test runs that mutate the display name (e.g.
+        // profile-update tests) are idempotent after re-seeding.
+        update: { emailVerified: true, name, updatedAt: now, ...(role ? { role } : {}) },
       })
       return found.id
     }

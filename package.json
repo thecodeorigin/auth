@@ -8,7 +8,10 @@
     "lint": "eslint .",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "prepare": "nuxt prepare"
+    "prepare": "nuxt prepare",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:proofs": "node examples/agent-proof.mjs && node examples/sso-proof.mjs && node examples/authz-proof.mjs && node examples/entitlement-proof.mjs && node examples/billing-proof.mjs"
   },
   "dependencies": {
     "@better-auth/api-key": "1.6.16",
@@ -45,6 +48,7 @@
     "@iconify-json/lucide": "^1.2.104",
     "@iconify-json/simple-icons": "^1.2.80",
     "@libsql/client": "^0.17.3",
+    "@playwright/test": "^1.61.0",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "eslint": "^10.4.1",

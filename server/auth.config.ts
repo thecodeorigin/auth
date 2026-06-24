@@ -195,9 +195,14 @@ export default defineServerAuth(({ runtimeConfig }) => {
       openAPI(),
       polar({
         client: polarClient,
-        createCustomerOnSignUp: true,
+        // Disabled in demo mode (NUXT_DEMO_MODE) so test email domains
+        // (example.com, mailinator.com …) don't hit Polar's MX-record validation.
+        createCustomerOnSignUp: !runtimeConfig.demoMode,
         // Bind the Polar customer to our user id so webhooks resolve back to a user.
-        getCustomerCreateParams: async ({ user }) => ({ metadata: { userId: user.id ?? '' } }),
+        // user.id may be undefined in onBeforeUserCreate (id is assigned by adapter.create).
+        // Only include metadata.userId when it is a non-empty string; the onAfterUserCreate
+        // hook will update externalId once the user is persisted.
+        getCustomerCreateParams: async ({ user }) => (user.id ? { metadata: { userId: user.id } } : {}),
         use: [
           checkout({
             // No static product list: checkout is per-product — the UI passes the
