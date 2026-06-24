@@ -147,6 +147,9 @@ export default defineNuxtConfig({
           name: 'thecodeorigin-auth',
           routes: [{ pattern: 'auth.thecodeorigin.com', custom_domain: true }],
           observability: { logs: { enabled: true, head_sampling_rate: 1 } },
+          // nuxt-security's rate limiter uses the `cloudflare-r2-binding` driver,
+          // which reads an R2 bucket bound as BUCKET. Without it every route 500s.
+          r2_buckets: [{ binding: 'BUCKET', bucket_name: 'thecodeorigin-auth' }],
         },
       },
     },
