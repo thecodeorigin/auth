@@ -33,21 +33,29 @@ const ownerCount = computed(() => members.value.filter(m => m.role === 'owner').
 async function load() {
   loading.value = true
   error.value = ''
-  try {
-    const { data, error: e } = await orgApi.listMembers()
+  const [membersRes, rolesRes] = await Promise.allSettled([
+    orgApi.listMembers(),
+    orgApi.listRoles(),
+  ])
+
+  if (membersRes.status === 'fulfilled') {
+    const { data, error: e } = membersRes.value
     if (e)
-      throw new Error(e.message ?? 'Failed to load members')
-    members.value = ((data as { members?: MemberRow[] })?.members ?? [])
-    const { data: roles } = await orgApi.listRoles()
-    const dyn = ((roles as { roles?: { role: string }[] })?.roles ?? []).map(r => r.role)
+      error.value = e.message ?? 'Failed to load members'
+    else
+      members.value = ((data as { members?: MemberRow[] })?.members ?? [])
+  }
+  else {
+    error.value = 'Failed to load members'
+  }
+
+  // Roles are non-critical: degrade to the built-in set on failure.
+  if (rolesRes.status === 'fulfilled') {
+    const dyn = ((rolesRes.value.data as { roles?: { role: string }[] })?.roles ?? []).map(r => r.role)
     roleNames.value = Array.from(new Set(['owner', 'admin', 'member', ...dyn]))
   }
-  catch (err) {
-    error.value = (err as Error).message
-  }
-  finally {
-    loading.value = false
-  }
+
+  loading.value = false
 }
 onMounted(load)
 

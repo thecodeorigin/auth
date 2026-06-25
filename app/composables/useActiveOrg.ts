@@ -1,19 +1,23 @@
 /**
- * Resolves the active organization (full detail) from the session and publishes
- * its slug to a shared state so the sidebar nav can build `/orgs/:slug/*` links.
- * Also mirrors the active member role into `ability.orgRole` for $ability.
+ * Resolves the active organization for the dashboard. The active-org slug and
+ * the member role are SSR-resolved via `useBootstrap()` (collapsing the old
+ * client-side waterfall head). This composable adds: (1) the first-load
+ * auto-select of a member's first org when none is active, and (2) the full org
+ * detail used by org-scoped pages.
  */
 export function useActiveOrg() {
   const { session, fetchSession } = useUserSession()
   const orgApi = useOrgApi()
-  const activeOrgSlug = useState<string | null>('activeOrgSlug', () => null)
-  const activeMemberRole = useState<string | null>('ability.orgRole', () => null)
   const autoSelecting = useState<boolean>('activeOrg.autoSelecting', () => false)
 
   const activeOrgId = computed(() => session.value?.activeOrganizationId ?? null)
 
-  // Members land without an active org set; auto-select their first org once so
-  // the org-scoped nav (Users, Invitations) and pages have a context to use.
+  // SSR-seeded slug + role (shared state). refreshBootstrap re-resolves after
+  // an org switch below.
+  const { activeOrgSlug, activeMemberRole, refresh: refreshBootstrap } = useBootstrap()
+
+  // Members land without an active org; auto-select their first one once (client
+  // only, first-ever load — the common returning case already has activeOrgId).
   watch(activeOrgId, async () => {
     if (!import.meta.client || activeOrgId.value || autoSelecting.value)
       return
@@ -24,6 +28,7 @@ export function useActiveOrg() {
       if (first) {
         await orgApi.setActive(first.id)
         await fetchSession({ force: true })
+        await refreshBootstrap()
       }
     }
     catch {
@@ -34,9 +39,8 @@ export function useActiveOrg() {
     }
   }, { immediate: true })
 
-  // The better-auth client only carries the session in the browser, so all
-  // resolution happens client-side (SSR has no cookie on the better-fetch
-  // client and useAuthClient() is null there).
+  // Full org detail for org-scoped pages. Client-only for now; refines (never
+  // nulls) the bootstrap-seeded slug when it loads.
   const { data: org, refresh, pending } = useAsyncData(
     'active-org',
     async () => {
@@ -49,21 +53,10 @@ export function useActiveOrg() {
   )
 
   watch(org, (o) => {
-    activeOrgSlug.value = (o as { slug?: string } | null)?.slug ?? null
-  }, { immediate: true })
+    const slug = (o as { slug?: string } | null)?.slug
+    if (slug)
+      activeOrgSlug.value = slug
+  })
 
-  // Keep $ability's org role in sync with the active org (client only).
-  watch(activeOrgId, () => {
-    if (!import.meta.client)
-      return
-    if (!activeOrgId.value) {
-      activeMemberRole.value = null
-      return
-    }
-    orgApi.getActiveMemberRole()
-      .then(({ data }) => { activeMemberRole.value = (data as { role?: string } | null)?.role ?? null })
-      .catch(() => { activeMemberRole.value = null })
-  }, { immediate: true })
-
-  return { org, activeOrgId, activeOrgSlug, refresh, pending }
+  return { org, activeOrgId, activeOrgSlug, activeMemberRole, refresh, pending }
 }

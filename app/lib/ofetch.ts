@@ -36,7 +36,15 @@ export const $http = $fetch.create({
     }
 
     if (import.meta.server) {
-      const headers = useRequestHeaders(['cookie'])
+      // Forward cookie (for session) AND the real client IP, so same-origin SSR
+      // subrequests are rate-limited against the *client's* bucket, not a single
+      // shared Worker-egress bucket. Without this, SSR self-fetch 429s everyone.
+      const headers = useRequestHeaders([
+        'cookie',
+        'cf-connecting-ip',
+        'x-forwarded-for',
+        'x-real-ip',
+      ])
       options.headers = { ...options.headers, ...headers } as typeof options.headers
     }
     // Our custom Nitro routes (/api/auth/**, /api/orgs/**) are CSRF-exempt via
@@ -53,9 +61,12 @@ export const $http = $fetch.create({
       useLoadingIndicator().finish({ error: true })
     }
 
+    // Client-only bounce to /sign-in on 401. On SSR we let the error propagate;
+    // auth.global already gates unauthenticated users before render, so an SSR
+    // 401 is an edge case (cookie expired mid-request) handled by useAsyncData's
+    // default + the page's existing empty state — never a 500.
     if (error?.response?.status === 401 && import.meta.client) {
       const path = useRoute().fullPath
-      // Don't bounce on the auth surface itself.
       if (!path.startsWith('/sign-in')) {
         navigateTo(`/sign-in?redirect=${encodeURIComponent(path)}&reason=session_expired`)
       }

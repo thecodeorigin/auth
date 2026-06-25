@@ -4,10 +4,11 @@ import DashboardNavbar from '~/components/Dashboard/DashboardNavbar.vue'
 
 const subsApi = useSubscriptionsApi()
 
-// better-auth client carries the session only in the browser → client-side only.
+// Backed by a cookie-resolving custom Nitro route; with ofetch forwarding the
+// session cookie on SSR, this fetches during render and ships in the payload —
+// no client round-trip for subscriptions on cold load.
 const { data: subs } = await useAsyncData('home-subscriptions', () => subsApi.list(), {
   default: () => [] as SubscriptionRow[],
-  server: false,
 })
 </script>
 

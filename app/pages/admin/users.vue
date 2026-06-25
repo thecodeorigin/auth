@@ -61,7 +61,8 @@ async function stopImpersonating() {
 onMounted(async () => {
   if (!import.meta.client)
     return
-  await fetchSession({ force: true })
+  // Session is seeded by the server session plugin; the admin list endpoint is
+  // itself admin-gated, so no forced re-fetch is needed just to render the page.
   if (user.value?.role !== 'admin' && !impersonating.value) {
     await navigateTo('/')
     return
