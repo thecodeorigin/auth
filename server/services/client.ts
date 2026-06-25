@@ -1,7 +1,9 @@
+import type { AbilityMap } from '#shared/abilities'
 import { db } from '@nuxthub/db'
 import { sql } from 'drizzle-orm'
 import { sha256Base64Url } from '../utils/hash'
 import { randomToken } from '../utils/nanoid'
+import { parseMetadata, readAbilities } from './abilities'
 
 type WhereValue = string | number | boolean | string[] | number[] | Date | null
 
@@ -17,6 +19,7 @@ export interface ClientPatch {
   redirectUris?: string[]
   skipConsent?: boolean
   disabled?: boolean
+  abilities?: AbilityMap
 }
 
 export interface ClientCreateInput {
@@ -45,6 +48,7 @@ export interface ClientView {
   skipConsent: boolean | null
   disabled: boolean | null
   createdAt: Date | null
+  abilities: AbilityMap
 }
 
 export interface ClientListItem {
@@ -92,7 +96,7 @@ export async function clientCreate(adapter: ClientAdapter, input: ClientCreateIn
 }
 
 export async function clientGet(adapter: ClientAdapter, clientId: string): Promise<ClientView | null> {
-  const client = await adapter.findOne<ClientView>({
+  const client = await adapter.findOne<ClientView & { metadata?: unknown }>({
     model: 'oauthClient',
     where: [{ field: 'clientId', value: clientId }],
   })
@@ -108,6 +112,7 @@ export async function clientGet(adapter: ClientAdapter, clientId: string): Promi
     skipConsent: client.skipConsent,
     disabled: client.disabled,
     createdAt: client.createdAt,
+    abilities: readAbilities(client.metadata),
   }
 }
 
@@ -136,7 +141,7 @@ export async function clientRotateSecret(adapter: ClientAdapter, clientId: strin
 }
 
 export async function clientUpdate(adapter: ClientAdapter, clientId: string, patch: ClientPatch): Promise<boolean> {
-  const existing = await adapter.findOne<{ clientId: string }>({
+  const existing = await adapter.findOne<{ clientId: string, metadata?: unknown }>({
     model: 'oauthClient',
     where: [{ field: 'clientId', value: clientId }],
   })
@@ -152,6 +157,11 @@ export async function clientUpdate(adapter: ClientAdapter, clientId: string, pat
     update.skipConsent = patch.skipConsent
   if (patch.disabled !== undefined)
     update.disabled = patch.disabled
+  if (patch.abilities !== undefined) {
+    const meta = parseMetadata(existing.metadata)
+    // Re-pin clientId from the authoritative column — NEVER trust the merged blob (R1).
+    update.metadata = { ...meta, clientId, abilities: patch.abilities }
+  }
 
   await adapter.update({ model: 'oauthClient', where: [{ field: 'clientId', value: clientId }], update })
   return true

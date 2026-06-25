@@ -49,12 +49,26 @@ export default defineTask({
     // role:null → inherit the member's base role ('viewer'). Goes through the Phase-3 service.
     await accessSet({ organizationId: org.id, userId: alice.id, clientId: nordvpn.clientId, role: null })
 
+    // Per-app CASL abilities on NordVPN for role `viewer`. Goes through clientUpdate (the single
+    // writer) — this also re-pins metadata.clientId, so authz-proof.mjs doubles as the
+    // regression guard that id_token scoping survived the metadata write (R1).
+    await clientUpdate(adapter, nordvpn.clientId, {
+      abilities: {
+        viewer: [
+          { action: 'view', subject: 'Post' },
+          // eslint-disable-next-line no-template-curly-in-string
+          { action: 'manage', subject: 'Post', conditions: { authorId: '${user.id}' } },
+        ],
+      },
+    })
+
     return {
       result: 'ok',
       aliceId: alice.id,
       orgB: org.id,
       personalOrg: `org-u-${alice.id}`,
       nordvpnClientId: nordvpn.clientId,
+      abilitiesRole: 'viewer',
     }
   },
 })

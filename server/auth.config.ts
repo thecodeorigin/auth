@@ -5,8 +5,9 @@ import { checkout, polar, portal, usage, webhooks } from '@polar-sh/better-auth'
 import { Polar } from '@polar-sh/sdk'
 import { admin as adminPlugin, jwt, openAPI, organization } from 'better-auth/plugins'
 import { ac, roles } from '#shared/permissions'
+import { abilitiesResolve } from './services/abilities'
 import { accessClearMember, accessClearOrg, accessGrantAll } from './services/access'
-import { claimsResolve } from './services/claims'
+import { claimsResolve, claimsResolveAll } from './services/claims'
 import { clientListOrigins } from './services/client'
 import { entitlementsResolve } from './services/entitlements'
 import { orgEnsurePersonal } from './services/org'
@@ -137,16 +138,24 @@ export default defineServerAuth(({ runtimeConfig }) => {
           return claimsResolve(user.id, clientId)
         },
         // userinfo hook gets the validated access-token payload; azp = requesting client.
-        // Entitlements ride into userinfo ONLY (re-resolved live), never the immutable id_token.
+        // Entitlements + abilities ride into userinfo ONLY (re-resolved live), never the immutable id_token.
         async customUserInfoClaims({ user, jwt }) {
           const clientId = (jwt as { azp?: string, client_id?: string } | undefined)?.azp
             ?? (jwt as { client_id?: string } | undefined)?.client_id ?? null
-          const [claims, entitlement] = await Promise.all([
-            claimsResolve(user.id, clientId),
-            entitlementsResolve(user.id, clientId), // live per-call → reflects current DB
+          // Resolve org/roles ONCE; derive abilities from the SAME snapshot (no TOCTOU — R6).
+          const claims = await claimsResolve(user.id, clientId)
+          const [organizations, entitlement, abilities] = await Promise.all([
+            claimsResolveAll(user.id, clientId),
+            entitlementsResolve(user.id, clientId),
+            abilitiesResolve(user.id, clientId, claims.roles),
           ])
-          // entitlement is null when the requesting client maps to no Nord product.
-          return { ...claims, entitlement }
+          return {
+            ...claims,
+            organizations,
+            abilities,
+            role: (user as { role?: string | null }).role ?? null,
+            entitlement,
+          }
         },
       }),
       adminPlugin({

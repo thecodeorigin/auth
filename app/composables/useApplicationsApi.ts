@@ -1,3 +1,5 @@
+import type { AbilityMap } from '#shared/abilities'
+
 export interface ClientListItem {
   clientId: string
   name: string | null
@@ -17,6 +19,7 @@ export interface ClientPatch {
   redirectUris?: string[]
   skipConsent?: boolean
   disabled?: boolean
+  abilities?: AbilityMap
 }
 
 export interface ClientDetail {
@@ -28,6 +31,7 @@ export interface ClientDetail {
   skipConsent: boolean
   disabled: boolean
   createdAt: string | Date | null
+  abilities?: AbilityMap
 }
 
 export interface AdminConsent {

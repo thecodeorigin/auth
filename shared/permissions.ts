@@ -25,3 +25,22 @@ export const owner = ac.newRole({
 })
 
 export const roles = { owner, admin, member }
+
+/**
+ * Flatten an org role's statements into `subject:action` strings.
+ * Returns [] for an unknown or null role.
+ */
+export function abilitiesForRole(role: string | null | undefined): string[] {
+  if (!role)
+    return []
+  const def = (roles as Record<string, { statements?: Record<string, readonly string[]> }>)[role]
+  const statements = def?.statements
+  if (!statements)
+    return []
+  const out: string[] = []
+  for (const [subject, actions] of Object.entries(statements)) {
+    for (const action of actions)
+      out.push(`${subject}:${action}`)
+  }
+  return out
+}

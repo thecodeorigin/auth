@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ClientDetail } from '~/composables/useApplicationsApi'
+import PlatformAppAbilities from '#layers/admin/app/components/Platform/PlatformAppAbilities.vue'
 import PlatformClientSecretModal from '#layers/admin/app/components/Platform/PlatformClientSecretModal.vue'
 import DashboardNavbar from '~/components/Dashboard/DashboardNavbar.vue'
 
@@ -230,6 +231,9 @@ function removeUri(i: number) {
             </div>
           </div>
         </UCard>
+
+        <!-- Abilities -->
+        <PlatformAppAbilities :client-id="clientId" :abilities="client.abilities" @saved="load" />
 
         <!-- Danger zone -->
         <UCard class="lg:col-span-2" :ui="{ root: 'ring-error/50' }">

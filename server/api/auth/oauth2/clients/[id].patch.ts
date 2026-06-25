@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { abilityMapSchema } from '#shared/abilities'
 
 const redirectUri = z.string().url().refine(
   uri => /^https?:\/\//i.test(uri),
@@ -10,6 +11,7 @@ const bodySchema = z.object({
   redirectUris: z.array(redirectUri).min(1).optional(),
   skipConsent: z.boolean().optional(),
   disabled: z.boolean().optional(),
+  abilities: abilityMapSchema.optional(),
 }).refine(
   obj => Object.values(obj).some(v => v !== undefined),
   { message: 'At least one field must be provided' },
