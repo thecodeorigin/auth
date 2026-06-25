@@ -10,7 +10,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const isPublic = to.meta.public === true || to.meta.unauthenticatedOnly === true
 
-  if (loggedIn.value && to.meta.unauthenticatedOnly)
+  if (loggedIn.value && (to.meta.unauthenticatedOnly || to.path === '/sign-in'))
     return navigateTo('/')
 
   if (!loggedIn.value && !isPublic)
