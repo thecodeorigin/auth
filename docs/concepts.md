@@ -11,39 +11,78 @@ owns what**. The model has one rule that explains most of it:
 ```
                        ┌─────────────────────────────┐
                        │            User             │  a human account
-                       └──────────────┬──────────────┘
-                                      │ is a
-                  ┌───────────────────┼────────────────────┐
-                  │ Member of                               │ creator of
+                       │  system role: admin | user  │
+                       └──────┬───────────────┬──────┘
+              any user        │               │   role = admin ONLY
+              is a member of  │               │   creates / manages
+                  ┌───────────┘               └───────────┐
                   ▼                                         ▼
-        ┌───────────────────┐                    ┌────────────────────┐
-        │   Organization    │                    │   Application       │
-        │ (a group of people)│                   │ (an OAuth client)   │  GLOBAL
-        └─────────┬─────────┘                    └─────────┬──────────┘
-                  │ owns                                    │
-   ┌──────────────┼───────────────┐                        │ user approves via
-   ▼              ▼               ▼                         ▼
- Member      Invitation     OrganizationRole          ┌──────────┐
- (user×role)  (pending)     (custom roles)            │ Consent  │ (user × app)
-                  │                                    └──────────┘
-                  └──────────── Access (memberAppScope) ──────────┘
+        ┌────────────────────┐                    ┌────────────────────┐
+        │   Organization     │                    │   Application       │
+        │ (a group of people)│                    │ (an OAuth client)   │  GLOBAL
+        └─────────┬──────────┘                    └─────────┬──────────┘
+                  │ owns                                     │
+   ┌──────────────┼───────────────┐         a user approves it (Consent)
+   ▼              ▼               ▼          & is granted use (Access)
+ Member      Invitation     OrganizationRole               │
+ (user×role)  (pending)     (custom roles)                 ▼
+                  │                                    ┌──────────┐
+                  │                                    │ Consent  │ (user × app)
+                  └────────── Access (memberAppScope) ─┴──────────┘
                        "which member may use which app, as what role"
 ```
 
 Everything keyed to an `Organization` lives on the left; everything keyed to an
-`Application` is global and lives on the right. The **Access** grant is the only
-bridge between them.
+`Application` is global and lives on the right. **Only a system `admin` creates
+or manages Applications** — a regular `user` never does; they only *consent to*
+and *use* apps. The **Access** grant is the only bridge between the two sides.
 
 ## User
 
 A human account — the root identity. Holds email, name, picture, password /
-social logins, and a platform-level **system role** (`admin` or `user`). A
-system `admin` can manage everything; a `user` is authorized only through the
-organizations they belong to.
+social logins, and a platform-level **system role** (`admin` or `user`).
 
 On first verified sign-in, a user automatically gets a **personal
 organization** (a one-person org), so every user always has at least one org
 context.
+
+The system role splits accounts into two very different kinds of actor — and
+the split matters most around **Applications**, which are platform-global:
+
+### User (system role `user`)
+
+The default. A `user` is authorized **only through the organizations they belong
+to**, and acts strictly within org scope:
+
+- **Cannot create, edit, disable, or delete Applications.** Applications are
+  platform-global (see [Application](#application-oauth-client)); creating one
+  affects *every* organization, so it is an admin-only action. A `user` only
+  ever **consents** to apps and **uses** the apps they've been granted
+  [Access](#access-memberappscope) to.
+- Manages people and authorization **inside their own orgs** — invite members,
+  assign org roles, define custom `OrganizationRole`s, and grant per-member app
+  Access — bounded by their own role (`owner` / `admin` / `member`) in each org.
+- Manages their own account: profile, security, connected accounts, API keys,
+  and their own consents.
+
+Their sidebar is the member IA (Applications = *authorized apps*, Users =
+*org members*, Invitations, API Keys, Settings) — never the `/platform/*`
+surface.
+
+### System admin (system role `admin`)
+
+A platform operator. A system `admin` short-circuits every authorization check
+to **`manage all`** and owns the platform-global surface that no `user` can
+touch:
+
+- **Creates, edits, disables, and deletes Applications** (`/platform/applications`)
+  — the action that affects the whole platform.
+- Manages all Users, Organizations, Consents, and identity Providers across
+  every tenant (`/platform/*`), and can [impersonate](#impersonation) any
+  non-admin user for support.
+
+The admin surface is the authority; an org-level role never confers
+platform-level (`/platform/*`) power.
 
 ## Organization
 

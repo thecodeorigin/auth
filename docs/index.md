@@ -3,9 +3,9 @@
 layout: home
 
 hero:
-  name: "THECODEORIGIN Platform"
-  text: "Identity, access, and your own login button."
-  tagline: A self-hosted OIDC / OAuth 2.1 identity provider with a role-based management console — and a one-line Nuxt module to make any app a relying party.
+  name: "THECODEORIGIN"
+  text: "All in one Identity platform."
+  tagline: Verify once, get access to all of THECODEORIGIN ecosystem.
   actions:
     - theme: brand
       text: Get Started
