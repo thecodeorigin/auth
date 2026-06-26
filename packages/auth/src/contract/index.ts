@@ -53,7 +53,7 @@ export const ImpersonationCandidateSchema = z.object({
 export type ImpersonationCandidate = z.infer<typeof ImpersonationCandidateSchema>
 
 /** Server-safe session projection — no tokens, no KV internals. */
-export type ServerAuthSession = {
+export interface ServerAuthSession {
   sub: string
   email: string
   name: string | null

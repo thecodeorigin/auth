@@ -17,11 +17,11 @@ export function resolveAuthConfig(): ResolvedAuthConfig {
   const rc = useRuntimeConfig()
   const pub = (rc.public as Record<string, unknown> & { auth?: Record<string, unknown> }).auth ?? {}
   const priv = (rc as Record<string, unknown> & { auth?: Record<string, unknown> }).auth ?? {}
-  const domain = (pub.domain as string | undefined) || process.env.NUXT_THECODEORIGIN_DOMAIN || ''
+  const domain = process.env.NUXT_THECODEORIGIN_DOMAIN || (pub.domain as string | undefined) || ''
   return {
-    issuer: (pub.issuer as string | undefined) || (domain ? `https://${domain}/api/auth` : ''),
-    clientId: (pub.clientId as string | undefined) || process.env.NUXT_THECODEORIGIN_CLIENT_ID || '',
-    clientSecret: (priv.clientSecret as string | undefined) || process.env.NUXT_THECODEORIGIN_CLIENT_SECRET || '',
+    issuer: process.env.NUXT_THECODEORIGIN_ISSUER || (pub.issuer as string | undefined) || (domain ? `https://${domain}/api/auth` : ''),
+    clientId: process.env.NUXT_THECODEORIGIN_CLIENT_ID || (pub.clientId as string | undefined) || '',
+    clientSecret: process.env.NUXT_THECODEORIGIN_CLIENT_SECRET || (priv.clientSecret as string | undefined) || '',
     scopes: (pub.scopes as string[] | undefined) ?? ['openid', 'profile', 'email'],
     routes: pub.routes as ResolvedAuthConfig['routes'],
     cookieName: (priv.sessionCookieName as string | undefined) || 'tco_auth',

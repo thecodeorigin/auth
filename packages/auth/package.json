@@ -14,8 +14,8 @@
       "import": "./dist/contract/index.mjs"
     },
     "./server": {
-      "types": "./src/runtime/server/index.d.mts",
-      "import": "./src/runtime/server/index.mjs"
+      "types": "./dist/runtime/server/index.d.ts",
+      "import": "./dist/runtime/server/index.js"
     }
   },
   "main": "./dist/module.mjs",
@@ -28,7 +28,7 @@
         "./dist/contract/index.d.mts"
       ],
       "server": [
-        "./src/runtime/server/index.d.mts"
+        "./dist/runtime/server/index.d.ts"
       ]
     }
   },
@@ -42,7 +42,7 @@
     "prepack": "nuxt-module-build build",
     "dev": "npm run dev:prepare && nuxt dev playground",
     "dev:build": "nuxt build playground",
-    "prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxt prepare playground",
+    "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxt prepare playground",
     "release": "npm run lint && npm run test && npm run prepack && changelogen --release && npm publish && git push --follow-tags",
     "lint": "eslint .",
     "test": "vitest run",
@@ -50,14 +50,14 @@
     "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit"
   },
   "dependencies": {
-    "@casl/ability": "^6.8.1",
-    "@casl/vue": "^2.2.6",
-    "@nuxt/kit": "^4.4.2",
-    "defu": "^6.1.4",
-    "h3": "^1.14.0",
-    "ofetch": "^1.4.1",
-    "ufo": "^1.5.4",
-    "zod": "^4.3.6"
+    "@casl/ability": "catalog:",
+    "@casl/vue": "catalog:",
+    "@nuxt/kit": "catalog:",
+    "defu": "catalog:",
+    "h3": "catalog:",
+    "ofetch": "catalog:",
+    "ufo": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@nuxt/devtools": "catalog:",

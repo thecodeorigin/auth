@@ -72,3 +72,6 @@ catalog:
   wrangler: ^4.99.0
   yaml-eslint-parser: ^2.0.0
   zod: ^4.3.6
+catalogs:
+  conflicts_@nuxt/kit_h4_4_2:
+    '@nuxt/kit': ^4.4.2
