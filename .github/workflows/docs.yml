@@ -1,26 +1,19 @@
 name: Deploy Docs (Cloudflare Pages)
 
 # Builds the VitePress docs (docs/) and deploys them to Cloudflare Pages at
-# https://docs.thecodeorigin.com, then ensures a Cloudflare Zero Trust Access
-# policy that only lets *@thecodeorigin.com identities view the site.
+# https://docs.thecodeorigin.com.
 #
 # Like the Worker deploy, the ONLY GitHub secret is DOPPLER_TOKEN (read-only,
 # project=auth config=prd). Cloudflare creds are pulled from Doppler at run time
 # (CLOUDFLARE_TOKEN, CLOUDFLARE_ACCOUNT_ID).
 #
-# Fully automated: the Pages project, custom domain, DNS CNAME, and the Zero
-# Trust gate are all created/reconciled by the jobs below.
+# The Doppler CLOUDFLARE_TOKEN must carry:
+#   - Account · Cloudflare Pages: Edit        (deploy the build)
 #
-# The Doppler CLOUDFLARE_TOKEN must carry these permissions:
-#   - Account · Cloudflare Pages: Edit        (deploy + attach custom domain)
-#   - Zone · DNS: Edit + Zone: Read           (point the CNAME at the project)
-#   - Account · Access: Apps and Policies: Edit (configure the email gate)
-# If a permission is missing, the affected step logs a warning and skips so the
-# core deploy still succeeds.
-#
-# One-time, outside this workflow:
-#   - Zero Trust → Settings → Authentication: enable an identity provider
-#     (e.g. One-time PIN / Google) so visitors can prove their email.
+# One-time manual setup, configured outside this workflow:
+#   - Custom domain docs.thecodeorigin.com → Pages project + proxied DNS CNAME.
+#   - Cloudflare Zero Trust Access gate (allow only *@thecodeorigin.com, deny the
+#     default *.pages.dev hostname).
 
 on:
   push:
@@ -86,173 +79,3 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         run: pnpm exec wrangler pages deploy docs/.vitepress/dist --project-name=thecodeorigin-docs --branch=main
-
-      - name: Ensure custom domain (docs.thecodeorigin.com → Pages project)
-        # Attaches the custom domain to the Pages project AND points the proxied
-        # CNAME at <project>.pages.dev. Without the project-side attachment, an
-        # authenticated request gets "no available server" — the edge has no origin
-        # mapped for the hostname. Idempotent.
-        env:
-          PROJECT: thecodeorigin-docs
-          HOSTNAME: docs.thecodeorigin.com
-          ZONE: thecodeorigin.com
-        run: |
-          set -euo pipefail
-          base="https://api.cloudflare.com/client/v4"
-          acct="${base}/accounts/${CLOUDFLARE_ACCOUNT_ID}"
-          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H "Content-Type: application/json")
-          target="${PROJECT}.pages.dev"
-
-          # 1) Attach the custom domain to the Pages project (non-fatal if already attached).
-          attach="$(curl -sS "${auth[@]}" -X POST "${acct}/pages/projects/${PROJECT}/domains" --data "{\"name\":\"${HOSTNAME}\"}" || true)"
-          if [ "$(echo "$attach" | jq -r '.success // false')" = "true" ]; then
-            echo "Attached ${HOSTNAME} to Pages project ${PROJECT}."
-          else
-            echo "$attach" | jq -c '.errors // empty'
-            echo "Domain attach non-success (likely already attached) — continuing."
-          fi
-
-          # 2) Point the proxied CNAME at the project. Replace any stale records for the host.
-          zone_id="$(curl -fsS "${auth[@]}" "${base}/zones?name=${ZONE}" | jq -r '.result[0].id // empty' || true)"
-          if [ -z "$zone_id" ]; then
-            echo "::warning::Could not resolve zone ${ZONE} (token may lack Zone:Read). Manually set CNAME ${HOSTNAME} → ${target} (proxied)."
-          else
-            existing="$(curl -fsS "${auth[@]}" "${base}/zones/${zone_id}/dns_records?name=${HOSTNAME}")"
-            for id in $(echo "$existing" | jq -r '.result[]?.id'); do
-              curl -fsS "${auth[@]}" -X DELETE "${base}/zones/${zone_id}/dns_records/${id}" > /dev/null && echo "Removed stale DNS record ${id}"
-            done
-            body="$(jq -n --arg n "$HOSTNAME" --arg c "$target" '{type:"CNAME", name:$n, content:$c, proxied:true}')"
-            curl -fsS "${auth[@]}" -X POST "${base}/zones/${zone_id}/dns_records" --data "$body" \
-              | jq -r 'if .success then "Set proxied CNAME '"${HOSTNAME}"' → '"${target}"'" else "DNS error: " + (.errors|tostring) end'
-          fi
-
-          # 3) Report the domain's verification status.
-          curl -fsS "${auth[@]}" "${acct}/pages/projects/${PROJECT}/domains" \
-            | jq -r --arg h "$HOSTNAME" '.result[]? | select(.name==$h) | "Custom domain status: \(.status) (validation: \(.validation_data.status // "n/a"))"'
-
-  zero-trust:
-    # Configure the access gates after a successful deploy. Idempotent:
-    #   - docs.thecodeorigin.com  → allow only *@thecodeorigin.com
-    #   - *.pages.dev (the project's default URL) → deny everyone (disabled)
-    needs: deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
-      DOPPLER_PROJECT: auth
-      DOPPLER_CONFIG: prd
-    steps:
-      - name: Install Doppler CLI
-        uses: dopplerhq/cli-action@v3
-
-      - name: Resolve Cloudflare credentials from Doppler
-        run: |
-          CF_TOKEN="$(doppler secrets get CLOUDFLARE_TOKEN --plain)"
-          CF_ACCOUNT="$(doppler secrets get CLOUDFLARE_ACCOUNT_ID --plain)"
-          echo "::add-mask::$CF_TOKEN"
-          echo "::add-mask::$CF_ACCOUNT"
-          echo "CLOUDFLARE_API_TOKEN=$CF_TOKEN" >> "$GITHUB_ENV"
-          echo "CLOUDFLARE_ACCOUNT_ID=$CF_ACCOUNT" >> "$GITHUB_ENV"
-
-      - name: Ensure Access app + policy (allow only *@thecodeorigin.com)
-        env:
-          APP_DOMAIN: docs.thecodeorigin.com
-          ALLOWED_EMAIL_DOMAIN: thecodeorigin.com
-        run: |
-          set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/access"
-          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H "Content-Type: application/json")
-
-          # List apps first — if the token lacks Access scope, warn and skip
-          # rather than failing the whole pipeline.
-          list="$(curl -fsS "${auth[@]}" "${api}/apps?per_page=1000" || echo '{"success":false}')"
-          if [ "$(echo "$list" | jq -r '.success')" != "true" ]; then
-            echo "::warning::Could not list Zero Trust Access apps (token may lack 'Access: Apps and Policies: Edit'). Skipping gate configuration."
-            exit 0
-          fi
-
-          app_id="$(echo "$list" | jq -r --arg d "$APP_DOMAIN" 'first(.result[]? | select(.domain==$d) | .id) // empty')"
-          app_payload="$(jq -n --arg name 'THECODEORIGIN Docs' --arg domain "$APP_DOMAIN" \
-            '{name:$name, domain:$domain, type:"self_hosted", session_duration:"24h", app_launcher_visible:false}')"
-
-          if [ -z "$app_id" ]; then
-            echo "Creating Access application for $APP_DOMAIN"
-            app_id="$(curl -fsS "${auth[@]}" -X POST "${api}/apps" --data "$app_payload" | jq -r '.result.id')"
-          else
-            echo "Updating Access application $app_id"
-            curl -fsS "${auth[@]}" -X PUT "${api}/apps/${app_id}" --data "$app_payload" > /dev/null
-          fi
-
-          policy_name="Allow @${ALLOWED_EMAIL_DOMAIN}"
-          policy_payload="$(jq -n --arg name "$policy_name" --arg d "$ALLOWED_EMAIL_DOMAIN" \
-            '{name:$name, decision:"allow", precedence:1, include:[{email_domain:{domain:$d}}]}')"
-          policies="$(curl -fsS "${auth[@]}" "${api}/apps/${app_id}/policies")"
-          policy_id="$(echo "$policies" | jq -r --arg n "$policy_name" 'first(.result[]? | select(.name==$n) | .id) // empty')"
-
-          if [ -z "$policy_id" ]; then
-            echo "Creating allow policy '$policy_name'"
-            curl -fsS "${auth[@]}" -X POST "${api}/apps/${app_id}/policies" --data "$policy_payload" > /dev/null
-          else
-            echo "Updating allow policy $policy_id"
-            curl -fsS "${auth[@]}" -X PUT "${api}/apps/${app_id}/policies/${policy_id}" --data "$policy_payload" > /dev/null
-          fi
-
-          echo "Zero Trust Access ensured: $APP_DOMAIN → allow *@${ALLOWED_EMAIL_DOMAIN} only."
-
-      - name: Disable default pages.dev domain (Access deny-all)
-        # The *.pages.dev URL serves the docs WITHOUT the gate above. Put a
-        # deny-everyone Access app in front of the project's pages.dev hostnames
-        # so the docs are only reachable via docs.thecodeorigin.com. Idempotent.
-        env:
-          PAGES_HOST: thecodeorigin-docs.pages.dev
-        run: |
-          set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/access"
-          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H "Content-Type: application/json")
-          name="THECODEORIGIN Docs (pages.dev — disabled)"
-
-          list="$(curl -fsS "${auth[@]}" "${api}/apps?per_page=1000" || echo '{"success":false}')"
-          if [ "$(echo "$list" | jq -r '.success')" != "true" ]; then
-            echo "::warning::Could not list Access apps; skipping pages.dev lockdown."
-            exit 0
-          fi
-          app_id="$(echo "$list" | jq -r --arg n "$name" 'first(.result[]? | select(.name==$n) | .id) // empty')"
-
-          # Prefer covering the wildcard (preview deploys: <hash>.<project>.pages.dev).
-          # Wildcard app domains are plan-gated, so fall back to the canonical host only.
-          payload_wild="$(jq -n --arg name "$name" --arg h "$PAGES_HOST" --arg w "*.$PAGES_HOST" \
-            '{name:$name, type:"self_hosted", domain:$h, self_hosted_domains:[$h,$w], session_duration:"24h", app_launcher_visible:false}')"
-          payload_flat="$(jq -n --arg name "$name" --arg h "$PAGES_HOST" \
-            '{name:$name, type:"self_hosted", domain:$h, self_hosted_domains:[$h], session_duration:"24h", app_launcher_visible:false}')"
-
-          upsert() { # $1 = payload
-            if [ -z "$app_id" ]; then
-              curl -sS "${auth[@]}" -X POST "${api}/apps" --data "$1"
-            else
-              curl -sS "${auth[@]}" -X PUT "${api}/apps/${app_id}" --data "$1"
-            fi
-          }
-
-          resp="$(upsert "$payload_wild")"
-          if [ "$(echo "$resp" | jq -r '.success // false')" != "true" ]; then
-            echo "Wildcard app domain rejected (plan limit?) — preview URLs stay public. Falling back to canonical host."
-            echo "$resp" | jq -c '.errors // empty'
-            resp="$(upsert "$payload_flat")"
-          fi
-          app_id="$(echo "$resp" | jq -r '.result.id // empty')"
-          if [ -z "$app_id" ]; then
-            echo "::warning::Could not create/update the pages.dev block app."
-            echo "$resp" | jq -c '.errors // empty'
-            exit 0
-          fi
-
-          pname="Block everyone"
-          ppayload="$(jq -n --arg name "$pname" '{name:$name, decision:"deny", precedence:1, include:[{everyone:{}}]}')"
-          policies="$(curl -fsS "${auth[@]}" "${api}/apps/${app_id}/policies")"
-          pid="$(echo "$policies" | jq -r --arg n "$pname" 'first(.result[]? | select(.name==$n) | .id) // empty')"
-          if [ -z "$pid" ]; then
-            curl -fsS "${auth[@]}" -X POST "${api}/apps/${app_id}/policies" --data "$ppayload" > /dev/null
-          else
-            curl -fsS "${auth[@]}" -X PUT "${api}/apps/${app_id}/policies/${pid}" --data "$ppayload" > /dev/null
-          fi
-          echo "pages.dev disabled: ${PAGES_HOST} → deny all. Docs are only reachable via docs.thecodeorigin.com."
