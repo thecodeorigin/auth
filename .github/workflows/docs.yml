@@ -71,9 +71,15 @@ jobs:
       - name: Build docs (VitePress)
         run: pnpm docs:build
 
+      - name: Remove NuxtHub wrangler redirect
+        # `nuxt prepare` (postinstall) writes .wrangler/deploy/config.json pointing
+        # at the Worker build output. wrangler follows that redirect for ALL commands,
+        # including `pages deploy`, and fails. The Pages deploy must not use it.
+        run: rm -f .wrangler/deploy/config.json
+
       - name: Ensure Pages project exists
         # No-op (non-zero, swallowed) if the project already exists.
-        run: pnpm exec wrangler pages project create thecodeorigin-docs --production-branch=main 2>/dev/null || true
+        run: pnpm exec wrangler pages project create thecodeorigin-docs --production-branch=main || true
 
       - name: Deploy to Cloudflare Pages
         run: pnpm exec wrangler pages deploy docs/.vitepress/dist --project-name=thecodeorigin-docs --branch=main
