@@ -1,6 +1,6 @@
 name: Deploy (Cloudflare Workers)
 
-# Deploys the IdP to https://auth.thecodeorigin.com (Worker `thecodeorigin-auth`).
+# Deploys the IdP to https://id.thecodeorigin.com (Worker `thecodeorigin-auth`).
 # The ONLY GitHub secret used is DOPPLER_TOKEN (a read-only Doppler service token
 # scoped to project=auth, config=prd). Everything else — including the Cloudflare
 # credentials and all NUXT_* runtime vars — is pulled from Doppler at run time.

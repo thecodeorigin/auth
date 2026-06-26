@@ -122,7 +122,7 @@ pnpm build
 Deploys to Cloudflare Workers (`cloudflare-module` preset) with a D1 database;
 NuxtHub generates the bindings from the production config. Resource IDs are
 injected from build-time environment variables. Live at
-`auth.thecodeorigin.com`.
+`id.thecodeorigin.com`.
 
 ## Concepts
 

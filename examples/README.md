@@ -1,6 +1,6 @@
 # Test harness & demo clients
 
-`auth.example.com` (local: `http://localhost:3000`, prod: `https://auth.thecodeorigin.com`)
+`auth.example.com` (local: `http://localhost:3000`, prod: `https://id.thecodeorigin.com`)
 is the OIDC Identity Provider. These examples are relying-party (RP) clients that
 federate to it. **No auth-bypass endpoint exists** — all testing uses the
 capabilities the product already ships: deterministic seeded credentials, admin
@@ -34,12 +34,12 @@ idempotent and will not reprint it.
 ```bash
 # Single client, full Authorization-Code+PKCE loop; asserts RS256 id_token + kid in JWKS:
 node examples/express/verify-oidc.mjs
-# Against prod:  IDP=https://auth.thecodeorigin.com/api/auth CLIENT_SECRET=… node examples/express/verify-oidc.mjs
+# Against prod:  IDP=https://id.thecodeorigin.com/api/auth CLIENT_SECRET=… node examples/express/verify-oidc.mjs
 
 # THE headline test — SSO across all 4 clients from ONE sign-in (no re-login),
 # plus public-client PKCE enforcement:
 node examples/sso-proof.mjs
-# Against prod:  IDP=https://auth.thecodeorigin.com/api/auth EMAIL=… PASSWORD=… \
+# Against prod:  IDP=https://id.thecodeorigin.com/api/auth EMAIL=… PASSWORD=… \
 #                NUXT_OIDC_{EXPRESS,NEXT,NUXT}_SECRET=… node examples/sso-proof.mjs
 ```
 

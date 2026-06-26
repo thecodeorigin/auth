@@ -3,7 +3,7 @@
 import crypto from 'node:crypto'
 
 // Targets localhost by default; override via env to verify the deployed Worker:
-//   IDP=https://auth.thecodeorigin.com/api/auth CLIENT_SECRET=... node verify-oidc.mjs
+//   IDP=https://id.thecodeorigin.com/api/auth CLIENT_SECRET=... node verify-oidc.mjs
 const IDP = process.env.IDP || 'http://localhost:3000/api/auth'
 const CLIENT_ID = process.env.CLIENT_ID || 'express-app'
 const CLIENT_SECRET = process.env.CLIENT_SECRET || 'TMIt15nC/2R3oj+6BSvl3t8nghFACqo7'
