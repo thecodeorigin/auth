@@ -2,6 +2,7 @@
   "name": "@thecodeorigin/auth",
   "type": "module",
   "version": "0.0.1",
+  "private": false,
   "description": "THECODEORIGIN Authentication Portal client module",
   "repository": "https://github.com/thecodeorigin/auth",
   "exports": {
