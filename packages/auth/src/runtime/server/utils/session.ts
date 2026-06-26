@@ -1,8 +1,7 @@
 import type { H3Event } from 'h3'
 import type { AbilityRule, PublicSession } from '../../../contract'
 import { deleteCookie, getCookie, setCookie } from 'h3'
-import { useRuntimeConfig } from 'nitropack/runtime'
-import { useStorage } from 'nitropack/runtime'
+import { useRuntimeConfig, useStorage } from 'nitropack/runtime'
 
 export interface SessionRecord {
   sub: string

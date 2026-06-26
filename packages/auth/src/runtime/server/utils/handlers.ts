@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
-import { createError, defineEventHandler } from 'h3'
 import type { ServerAuthSession } from './session'
+import { createError, defineEventHandler } from 'h3'
 import { getServerAuthSession } from './session'
 
 export function defineAuthenticatedHandler<T>(

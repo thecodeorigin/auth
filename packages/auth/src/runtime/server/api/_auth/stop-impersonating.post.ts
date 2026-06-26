@@ -1,6 +1,5 @@
 import { createError, defineEventHandler } from 'h3'
-import { useRuntimeConfig } from 'nitropack/runtime'
-import { useStorage } from 'nitropack/runtime'
+import { useRuntimeConfig, useStorage } from 'nitropack/runtime'
 import { idpFetch } from '../../utils/idp'
 import { readSessionRecord, readSessionRecordById, toPublicSession, writeSessionRecord } from '../../utils/session'
 

@@ -11,6 +11,7 @@ export default withNuxt(
     pnpm: true,
     typescript: true,
     vue: true,
+    markdown: true,
   }),
   {
     files: ['**/*.md'],

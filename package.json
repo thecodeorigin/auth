@@ -11,7 +11,10 @@
     "prepare": "nuxt prepare",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:proofs": "node examples/agent-proof.mjs && node examples/sso-proof.mjs && node examples/authz-proof.mjs && node examples/entitlement-proof.mjs && node examples/billing-proof.mjs && node examples/rp-proof.mjs"
+    "test:proofs": "node examples/agent-proof.mjs && node examples/sso-proof.mjs && node examples/authz-proof.mjs && node examples/entitlement-proof.mjs && node examples/billing-proof.mjs && node examples/rp-proof.mjs",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "@better-auth/api-key": "catalog:",
@@ -59,6 +62,7 @@
     "eslint-plugin-unicorn": "catalog:",
     "jsonc-eslint-parser": "catalog:",
     "tailwindcss": "catalog:",
+    "vitepress": "catalog:",
     "wrangler": "catalog:",
     "yaml-eslint-parser": "catalog:"
   }
