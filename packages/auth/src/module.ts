@@ -11,21 +11,34 @@ export interface AuthRoutes {
 
 export interface ModuleOptions {
   domain: string
-  clientId: string
-  clientSecret: string
-  issuer?: string
   scopes?: string[]
   sessionStorageBase?: string
   sessionCookieName?: string
   routes?: Partial<AuthRoutes>
 }
 
+declare module '@nuxt/schema' {
+  interface RuntimeConfig {
+    auth: {
+      clientSecret: string
+      sessionStorageBase: string
+      sessionCookieName: string
+    }
+  }
+  interface PublicRuntimeConfig {
+    auth: {
+      domain: string
+      clientId: string
+      routes: AuthRoutes
+      scopes: string[]
+    }
+  }
+}
+
 export default defineNuxtModule<ModuleOptions>({
   meta: { name: '@thecodeorigin/auth', configKey: 'auth' },
   defaults: {
     domain: '',
-    clientId: '',
-    clientSecret: '',
     scopes: ['openid', 'profile', 'email'],
     sessionStorageBase: 'auth',
     sessionCookieName: 'tco_auth',
@@ -33,17 +46,19 @@ export default defineNuxtModule<ModuleOptions>({
   },
   setup(options, nuxt) {
     const resolver = createResolver(import.meta.url)
-    const routes = options.routes as AuthRoutes
-    const issuer = options.issuer || (options.domain ? `https://${options.domain}/api/auth` : '')
+    const routes = { signIn: '/auth/sign-in', callback: '/auth/callback', signOut: '/auth/sign-out', home: '/', error: '/auth/sign-in', ...options.routes } as AuthRoutes
 
-    ;(nuxt.options.runtimeConfig as Record<string, unknown>).auth = defu(
-      (nuxt.options.runtimeConfig as Record<string, unknown>).auth as object | undefined,
-      { clientSecret: options.clientSecret, sessionStorageBase: options.sessionStorageBase, sessionCookieName: options.sessionCookieName },
-    )
-    ;(nuxt.options.runtimeConfig.public as Record<string, unknown>).auth = defu(
-      (nuxt.options.runtimeConfig.public as Record<string, unknown>).auth as object | undefined,
-      { domain: options.domain, clientId: options.clientId, issuer, scopes: options.scopes, routes },
-    )
+    nuxt.options.runtimeConfig.auth = defu(nuxt.options.runtimeConfig.auth, {
+      clientSecret: '',
+      sessionStorageBase: options.sessionStorageBase!,
+      sessionCookieName: options.sessionCookieName!,
+    })
+    nuxt.options.runtimeConfig.public.auth = defu(nuxt.options.runtimeConfig.public.auth, {
+      domain: options.domain,
+      clientId: '',
+      routes,
+      scopes: options.scopes!,
+    })
 
     addServerHandler({ route: routes.signIn, handler: resolver.resolve('./runtime/server/routes/sign-in.get') })
     addServerHandler({ route: routes.callback, handler: resolver.resolve('./runtime/server/routes/callback.get') })

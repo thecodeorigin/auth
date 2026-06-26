@@ -1,23 +1,24 @@
 import type { H3Event } from 'h3'
 import type { SessionRecord } from './session'
 import { createError } from 'h3'
+import { useRuntimeConfig } from 'nitropack/runtime'
 import { $fetch } from 'ofetch'
-import { resolveAuthConfig } from './oidc'
 import { readSessionRecordById, writeSessionRecord } from './session'
 
 const SKEW_MS = 60_000
 
-async function refresh(cfg: ReturnType<typeof resolveAuthConfig>, rec: SessionRecord): Promise<boolean> {
+async function refresh(rec: SessionRecord): Promise<boolean> {
   if (rec.isImpersonation || !rec.refreshToken)
     return false
+  const { auth: runtimeConfig, public: { auth: publicRuntimeConfig } } = useRuntimeConfig()
   try {
     const t = await $fetch<{ access_token: string, refresh_token?: string, expires_in?: number }>(
-      `${cfg.issuer}/oauth2/token`,
+      `https://${publicRuntimeConfig.domain}/api/auth/oauth2/token`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${btoa(`${cfg.clientId}:${cfg.clientSecret}`)}`,
+          'Authorization': `Basic ${btoa(`${publicRuntimeConfig.clientId}:${runtimeConfig.clientSecret}`)}`,
         },
         body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: rec.refreshToken }).toString(),
       },
@@ -43,14 +44,14 @@ export async function idpFetch<T>(
   path: string,
   opts: { method?: string, body?: Record<string, unknown>, query?: Record<string, string | number> } = {},
 ): Promise<T> {
-  const cfg = resolveAuthConfig()
+  const { public: { auth: publicRuntimeConfig } } = useRuntimeConfig()
   if (!rec.isImpersonation && Date.now() > rec.accessExpiresAt - SKEW_MS) {
-    if (await refresh(cfg, rec))
+    if (await refresh(rec))
       await writeSessionRecord(id, rec)
   }
 
   const call = () =>
-    $fetch<T>(`${cfg.issuer}${path}`, {
+    $fetch<T>(`https://${publicRuntimeConfig.domain}${path}`, {
       method: opts.method as 'GET' | 'POST' | undefined,
       body: opts.body,
       query: opts.query as Record<string, string> | undefined,
@@ -69,7 +70,7 @@ export async function idpFetch<T>(
       Object.assign(rec, fresh)
       return call()
     }
-    if (await refresh(cfg, rec)) {
+    if (await refresh(rec)) {
       await writeSessionRecord(id, rec)
       return call()
     }

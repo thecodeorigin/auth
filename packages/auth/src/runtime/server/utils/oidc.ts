@@ -3,29 +3,21 @@ import { getRequestHost, getRequestProtocol } from 'h3'
 import { useRuntimeConfig } from 'nitropack/runtime'
 import { $fetch } from 'ofetch'
 
-export interface ResolvedAuthConfig {
-  issuer: string
-  clientId: string
-  clientSecret: string
-  scopes: string[]
-  routes: { signIn: string, callback: string, signOut: string, home: string, error: string }
-  cookieName: string
-  storageBase: string
-}
-
-export function resolveAuthConfig(): ResolvedAuthConfig {
-  const rc = useRuntimeConfig()
-  const pub = (rc.public as Record<string, unknown> & { auth?: Record<string, unknown> }).auth ?? {}
-  const priv = (rc as Record<string, unknown> & { auth?: Record<string, unknown> }).auth ?? {}
-  const domain = process.env.NUXT_THECODEORIGIN_DOMAIN || (pub.domain as string | undefined) || ''
-  return {
-    issuer: process.env.NUXT_THECODEORIGIN_ISSUER || (pub.issuer as string | undefined) || (domain ? `https://${domain}/api/auth` : ''),
-    clientId: process.env.NUXT_THECODEORIGIN_CLIENT_ID || (pub.clientId as string | undefined) || '',
-    clientSecret: process.env.NUXT_THECODEORIGIN_CLIENT_SECRET || (priv.clientSecret as string | undefined) || '',
-    scopes: (pub.scopes as string[] | undefined) ?? ['openid', 'profile', 'email'],
-    routes: pub.routes as ResolvedAuthConfig['routes'],
-    cookieName: (priv.sessionCookieName as string | undefined) || 'tco_auth',
-    storageBase: (priv.sessionStorageBase as string | undefined) || 'auth',
+declare module 'nitropack' {
+  interface NitroRuntimeConfig {
+    auth: {
+      clientSecret: string
+      sessionStorageBase: string
+      sessionCookieName: string
+    }
+  }
+  interface NitroRuntimePublicConfig {
+    auth: {
+      domain: string
+      clientId: string
+      routes: { signIn: string, callback: string, signOut: string, home: string, error: string }
+      scopes: string[]
+    }
   }
 }
 
@@ -46,20 +38,20 @@ export async function pkceChallenge(verifier: string): Promise<string> {
   return b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)))
 }
 
-export function callbackRedirectUri(event: H3Event, cfg: ResolvedAuthConfig): string {
-  const proto = getRequestProtocol(event)
-  const host = getRequestHost(event)
-  return `${proto}://${host}${cfg.routes.callback}`
+export function callbackRedirectUri(event: H3Event): string {
+  const { public: { auth: publicRuntimeConfig } } = useRuntimeConfig()
+  return `${getRequestProtocol(event)}://${getRequestHost(event)}${publicRuntimeConfig.routes.callback}`
 }
 
-export async function exchangeCode(cfg: ResolvedAuthConfig, code: string, verifier: string, redirectUri: string) {
+export async function exchangeCode(code: string, verifier: string, redirectUri: string) {
+  const { auth: runtimeConfig, public: { auth: publicRuntimeConfig } } = useRuntimeConfig()
   return $fetch<{ access_token: string, refresh_token?: string, expires_in?: number, id_token?: string }>(
-    `${cfg.issuer}/oauth2/token`,
+    `https://${publicRuntimeConfig.domain}/api/auth/oauth2/token`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${btoa(`${cfg.clientId}:${cfg.clientSecret}`)}`,
+        'Authorization': `Basic ${btoa(`${publicRuntimeConfig.clientId}:${runtimeConfig.clientSecret}`)}`,
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
@@ -71,8 +63,9 @@ export async function exchangeCode(cfg: ResolvedAuthConfig, code: string, verifi
   )
 }
 
-export async function fetchUserinfo(cfg: ResolvedAuthConfig, accessToken: string) {
-  return $fetch(`${cfg.issuer}/oauth2/userinfo`, {
+export async function fetchUserinfo(accessToken: string) {
+  const { public: { auth: publicRuntimeConfig } } = useRuntimeConfig()
+  return $fetch(`https://${publicRuntimeConfig.domain}/api/auth/oauth2/userinfo`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
 }

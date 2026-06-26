@@ -1,7 +1,7 @@
 import { createError, defineEventHandler } from 'h3'
+import { useRuntimeConfig } from 'nitropack/runtime'
 import { useStorage } from 'nitropack/runtime'
 import { idpFetch } from '../../utils/idp'
-import { resolveAuthConfig } from '../../utils/oidc'
 import { readSessionRecord, readSessionRecordById, toPublicSession, writeSessionRecord } from '../../utils/session'
 
 export default defineEventHandler(async (event) => {
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Original session missing — sign in again' })
 
   await writeSessionRecord(s.id, backup)
-  const cfg = resolveAuthConfig()
-  await useStorage(cfg.storageBase).removeItem(`session:${s.rec.backupId}`)
+  const { auth: runtimeConfig } = useRuntimeConfig()
+  await useStorage(runtimeConfig.sessionStorageBase).removeItem(`session:${s.rec.backupId}`)
   return toPublicSession(backup)
 })

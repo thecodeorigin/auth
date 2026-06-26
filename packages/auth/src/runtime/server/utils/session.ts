@@ -1,8 +1,8 @@
 import type { H3Event } from 'h3'
 import type { AbilityRule, PublicSession } from '../../../contract'
 import { deleteCookie, getCookie, setCookie } from 'h3'
+import { useRuntimeConfig } from 'nitropack/runtime'
 import { useStorage } from 'nitropack/runtime'
-import { resolveAuthConfig } from './oidc'
 
 export interface SessionRecord {
   sub: string
@@ -20,10 +20,6 @@ export interface SessionRecord {
   backupId: string | null
 }
 
-function store(base: string) {
-  return useStorage(base)
-}
-
 function key(id: string) {
   return `session:${id}`
 }
@@ -35,22 +31,22 @@ export function newSessionId(): string {
 }
 
 export async function writeSessionRecord(id: string, rec: SessionRecord): Promise<void> {
-  const cfg = resolveAuthConfig()
-  await store(cfg.storageBase).setItem(key(id), rec)
+  const { auth: runtimeConfig } = useRuntimeConfig()
+  await useStorage(runtimeConfig.sessionStorageBase).setItem(key(id), rec)
 }
 
 export async function readSessionRecord(event: H3Event): Promise<{ id: string, rec: SessionRecord } | null> {
-  const cfg = resolveAuthConfig()
-  const id = getCookie(event, cfg.cookieName)
+  const { auth: runtimeConfig } = useRuntimeConfig()
+  const id = getCookie(event, runtimeConfig.sessionCookieName)
   if (!id)
     return null
-  const rec = await store(cfg.storageBase).getItem<SessionRecord>(key(id))
+  const rec = await useStorage(runtimeConfig.sessionStorageBase).getItem<SessionRecord>(key(id))
   return rec ? { id, rec } : null
 }
 
 export async function setSessionCookie(event: H3Event, id: string): Promise<void> {
-  const cfg = resolveAuthConfig()
-  setCookie(event, cfg.cookieName, id, {
+  const { auth: runtimeConfig } = useRuntimeConfig()
+  setCookie(event, runtimeConfig.sessionCookieName, id, {
     httpOnly: true,
     secure: !import.meta.dev,
     sameSite: 'lax',
@@ -60,19 +56,19 @@ export async function setSessionCookie(event: H3Event, id: string): Promise<void
 }
 
 export async function destroySession(event: H3Event): Promise<SessionRecord | null> {
-  const cfg = resolveAuthConfig()
-  const id = getCookie(event, cfg.cookieName)
+  const { auth: runtimeConfig } = useRuntimeConfig()
+  const id = getCookie(event, runtimeConfig.sessionCookieName)
   if (!id)
     return null
-  const rec = await store(cfg.storageBase).getItem<SessionRecord>(key(id))
-  await store(cfg.storageBase).removeItem(key(id))
-  deleteCookie(event, cfg.cookieName, { path: '/' })
+  const rec = await useStorage(runtimeConfig.sessionStorageBase).getItem<SessionRecord>(key(id))
+  await useStorage(runtimeConfig.sessionStorageBase).removeItem(key(id))
+  deleteCookie(event, runtimeConfig.sessionCookieName, { path: '/' })
   return rec
 }
 
 export async function readSessionRecordById(id: string): Promise<SessionRecord | null> {
-  const cfg = resolveAuthConfig()
-  return store(cfg.storageBase).getItem<SessionRecord>(key(id))
+  const { auth: runtimeConfig } = useRuntimeConfig()
+  return useStorage(runtimeConfig.sessionStorageBase).getItem<SessionRecord>(key(id))
 }
 
 /** Server-safe session for domain routes — no tokens, no internal storage fields. */

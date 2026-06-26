@@ -1,14 +1,14 @@
 import { defineEventHandler, sendRedirect } from 'h3'
+import { useRuntimeConfig } from 'nitropack/runtime'
 import { $fetch } from 'ofetch'
-import { resolveAuthConfig } from '../utils/oidc'
 import { destroySession } from '../utils/session'
 
 export default defineEventHandler(async (event) => {
-  const cfg = resolveAuthConfig()
+  const { public: { auth: publicRuntimeConfig } } = useRuntimeConfig()
   const rec = await destroySession(event)
   if (rec?.accessToken) {
     try {
-      await $fetch(`${cfg.issuer}/oauth2/endsession`, {
+      await $fetch(`https://${publicRuntimeConfig.domain}/api/auth/oauth2/endsession`, {
         method: 'POST',
         body: new URLSearchParams({ token: rec.refreshToken ?? rec.accessToken }).toString(),
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -16,5 +16,5 @@ export default defineEventHandler(async (event) => {
     }
     catch {}
   }
-  return sendRedirect(event, cfg.routes.home)
+  return sendRedirect(event, publicRuntimeConfig.routes.home)
 })

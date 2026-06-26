@@ -1,7 +1,8 @@
 import { defineEventHandler, deleteCookie, getCookie, getQuery, sendRedirect } from 'h3'
+import { useRuntimeConfig } from 'nitropack/runtime'
 import { z } from 'zod'
 import { UserinfoClaimsSchema } from '../../../contract'
-import { callbackRedirectUri, exchangeCode, fetchUserinfo, resolveAuthConfig, safePath } from '../utils/oidc'
+import { callbackRedirectUri, exchangeCode, fetchUserinfo, safePath } from '../utils/oidc'
 import { newSessionId, setSessionCookie, writeSessionRecord } from '../utils/session'
 
 const RawUserinfoSchema = UserinfoClaimsSchema.extend({
@@ -13,18 +14,18 @@ const RawUserinfoSchema = UserinfoClaimsSchema.extend({
 })
 
 export default defineEventHandler(async (event) => {
-  const cfg = resolveAuthConfig()
+  const { public: { auth: publicRuntimeConfig } } = useRuntimeConfig()
   const q = getQuery(event)
-  const fail = (e: string) => sendRedirect(event, `${cfg.routes.error}?error=${encodeURIComponent(e)}`)
+  const fail = (e: string) => sendRedirect(event, `${publicRuntimeConfig.routes.error}?error=${encodeURIComponent(e)}`)
 
   if (q.error)
     return fail(String(q.error))
 
   const state = getCookie(event, 'tco_state')
   const verifier = getCookie(event, 'tco_verifier')
-  const redirectTo = safePath(getCookie(event, 'tco_redirect'), cfg.routes.home)
+  const redirectTo = safePath(getCookie(event, 'tco_redirect'), publicRuntimeConfig.routes.home)
   for (const c of ['tco_state', 'tco_verifier', 'tco_redirect'])
-    deleteCookie(event, c, { path: cfg.routes.callback })
+    deleteCookie(event, c, { path: publicRuntimeConfig.routes.callback })
 
   if (!q.code || !q.state || !state || q.state !== state || !verifier)
     return fail('invalid_state')
@@ -32,8 +33,8 @@ export default defineEventHandler(async (event) => {
   let tokens: { access_token: string, refresh_token?: string, expires_in?: number }
   let userinfoRaw: unknown
   try {
-    tokens = await exchangeCode(cfg, String(q.code), verifier, callbackRedirectUri(event, cfg))
-    userinfoRaw = await fetchUserinfo(cfg, tokens.access_token)
+    tokens = await exchangeCode(String(q.code), verifier, callbackRedirectUri(event))
+    userinfoRaw = await fetchUserinfo(tokens.access_token)
   }
   catch (err: unknown) {
     const detail = err instanceof Error ? err.message : String(err)
