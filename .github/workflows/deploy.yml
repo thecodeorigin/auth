@@ -21,6 +21,8 @@ jobs:
     timeout-minutes: 25
     env:
       DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+      DOPPLER_PROJECT: auth
+      DOPPLER_CONFIG: prd
     steps:
       - uses: actions/checkout@v4
 
