@@ -1,0 +1,14 @@
+{
+  "name": "@thecodeorigin/auth-playground",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate"
+  },
+  "dependencies": {
+    "@thecodeorigin/auth": "workspace:*",
+    "nuxt": "catalog:"
+  }
+}

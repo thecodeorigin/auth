@@ -67,7 +67,7 @@ vite: {
 **2. `server/utils/polar-dev.ts`** — the reconciler (see Step 3b.2 below;
 identical for both designs).
 
-**3. `server/plugins/polar-webhook.dev.ts`** — the Design-B plugin (see the
+**3. `server/plugins/polar.dev.ts`** — the Design-B plugin (see the
 "Design B — own the tunnel" section below; it is the primary file, not a
 fallback, for this project).
 
@@ -154,7 +154,7 @@ export async function ensureDevPolarWebhook(accessToken: string, publicBaseUrl: 
 > Token), `createWebhookEndpoint` needs `organizationId` — add it from
 > `runtimeConfig.polarOrganizationId`.
 
-### Step 3b.3 — `server/plugins/polar-webhook.dev.ts`  *(Design A variant — SKIP for this project; use the Design B plugin below)*
+### Step 3b.3 — `server/plugins/polar.dev.ts`  *(Design A variant — SKIP for this project; use the Design B plugin below)*
 
 ```ts
 export default defineNitroPlugin(async () => {
@@ -208,7 +208,7 @@ directly so you hold `listener.url()`.
 1. `nuxt.config.ts`: **remove `'@nuxtjs/ngrok'` from `modules`**; add
    `vite: { server: { allowedHosts: ['.ngrok-free.app'] } }` (the module used to
    set this). Add `@ngrok/ngrok` to `dependencies` (already transitive).
-2. `server/plugins/polar-webhook.dev.ts`:
+2. `server/plugins/polar.dev.ts`:
 ```ts
 export default defineNitroPlugin(async (nitroApp) => {
   if (!import.meta.dev)

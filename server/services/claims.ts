@@ -89,7 +89,7 @@ function byActive(a: Row, b: Row): number {
  * (same access-grant model as claimsResolve), ordered personal→oldest.
  * Returns [] when the client has no grants anywhere.
  */
-export async function claimsResolveAll(userId: string, clientId?: string | null): Promise<import('#shared/auth-contract').RpOrganization[]> {
+export async function claimsResolveAll(userId: string, clientId?: string | null): Promise<import('@thecodeorigin/auth/contract').RpOrganization[]> {
   try {
     const memberships = await db.query.member.findMany({
       where: (m, { eq }) => eq(m.userId, userId),

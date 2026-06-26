@@ -13,6 +13,7 @@ const DEMO_CLIENTS = [
   { name: 'NordPass', redirectUris: ['http://localhost:3002/api/auth/callback/betterauth'], public: false },
   { name: 'NordLocker', redirectUris: ['http://localhost:3003/auth/oidc/callback'], public: false },
   { name: 'Nord Web', redirectUris: ['http://localhost:3004/callback'], public: true },
+  { name: 'auth-module-playground', redirectUris: ['http://localhost:3001/auth/callback'], public: false },
 ]
 
 export default defineTask({

@@ -1,6 +1,9 @@
 export default defineEventHandler((event) => {
   const path = event.path || ''
-  if (!path.startsWith('/api/auth/admin/impersonate-user'))
+  const guarded = path.startsWith('/api/auth/admin/impersonate-user')
+    || path.startsWith('/api/auth/rp/impersonate')
+  // /stop-impersonating must always be allowed so sessions can be cleaned up
+  if (!guarded || path.startsWith('/api/auth/rp/stop-impersonating'))
     return
 
   const allowImpersonation = (useRuntimeConfig().allowImpersonation as string) === 'true'

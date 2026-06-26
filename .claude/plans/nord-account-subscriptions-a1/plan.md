@@ -85,7 +85,7 @@ platform offline" and "real Polar checkout."
 | 01 | Schema + static catalog + shared helpers | `server/db/schema/billing.ts`, `shared/catalog.ts`, `shared/subscription.ts`, migration | — |
 | 02 | Services + Nord reseed + cleanup hooks | `server/services/subscription.ts`, `family.ts`, `entitlements.ts`, `polar-products.ts`; edit `tasks/seed/idp.ts`, `tasks/seed/authz-fixtures.ts`; new `tasks/seed/subscriptions.ts`; edit `auth.config.ts` (user-delete hook) | 01 |
 | 03 | Polar full live integration | edit `server/auth.config.ts` (subplugins, webhooks), `app/auth.config.ts` (client plugin), `nuxt.config.ts` (env + routeRule), `.env.example` | 01, 02 |
-| 03b | Dev webhook auto-provision (ngrok↔Polar) | `server/utils/polar-dev.ts`, `server/plugins/polar-webhook.dev.ts`, `nuxt.config.ts` (`ngrok.domain`) | 03 |
+| 03b | Dev webhook auto-provision (ngrok↔Polar) | `server/utils/polar-dev.ts`, `server/plugins/polar.dev.ts`, `nuxt.config.ts` (`ngrok.domain`) | 03 |
 | 04 | OIDC userinfo entitlements + proof updates | edit `auth.config.ts` userinfo hook, `services/entitlements.ts`; edit `examples/authz-proof.mjs`; new `examples/entitlement-proof.mjs` | 02, 03 |
 | 05 | Custom Nitro routes + composables | `server/api/account/subscriptions/*`, `server/api/account/family/*`, `server/api/billing/config.get.ts`; `app/composables/useSubscriptionsApi.ts`, `useFamilyApi.ts`, `useBillingApi.ts` | 02, 03 |
 | 06 | UI — the portal | `layers/subscription/*` (nuxt.config, nav contribute, pages, components); repurpose `app/pages/index.vue` | 05 |
@@ -103,7 +103,7 @@ Medium-to-high coupling between 02→05; UI (06) is the widest. Build in order.
 - `server/services/entitlements.ts` — `entitlementsResolve(userId, clientId)`
 - `server/services/polar-products.ts` — env-driven `productId ⇄ planSlug` map + checkout product list
 - `server/utils/polar-dev.ts` — dev-only Polar webhook reconciler (Phase 03b)
-- `server/plugins/polar-webhook.dev.ts` — dev-only Nitro plugin that provisions the webhook + sets the secret (Phase 03b)
+- `server/plugins/polar.dev.ts` — dev-only Nitro plugin that provisions the webhook + sets the secret (Phase 03b)
 - `server/tasks/seed/subscriptions.ts` — `seed:subscriptions`
 - `server/api/account/subscriptions/index.get.ts`
 - `server/api/account/subscriptions/[id]/cancel.post.ts`

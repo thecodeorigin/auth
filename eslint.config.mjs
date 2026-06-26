@@ -1,7 +1,7 @@
 import antfu from '@antfu/eslint-config'
-// import pluginPnpm from 'eslint-plugin-pnpm'
-// import * as jsoncParser from 'jsonc-eslint-parser'
-// import * as yamlParser from 'yaml-eslint-parser'
+import pluginPnpm from 'eslint-plugin-pnpm'
+import * as jsoncParser from 'jsonc-eslint-parser'
+import * as yamlParser from 'yaml-eslint-parser'
 import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt(
@@ -45,39 +45,39 @@ export default withNuxt(
   {
     ignores: ['node_modules', '.nuxt', '.agents', '.agent', '.claude', '.data', '.wrangler', '.output', 'dist', 'server/db/migrations', 'examples'],
   },
-  // {
-  //   name: 'pnpm/package.json',
-  //   files: [
-  //     'package.json',
-  //     '**/package.json',
-  //   ],
-  //   languageOptions: {
-  //     parser: jsoncParser,
-  //   },
-  //   plugins: {
-  //     pnpm: pluginPnpm,
-  //   },
-  //   rules: {
-  //     'pnpm/json-enforce-catalog': 'error',
-  //     'pnpm/json-valid-catalog': 'error',
-  //     'pnpm/json-prefer-workspace-settings': 'error',
-  //   },
-  // },
-  // {
-  //   name: 'pnpm/pnpm-workspace-yaml',
-  //   files: ['pnpm-workspace.yaml'],
-  //   languageOptions: {
-  //     parser: yamlParser,
-  //   },
-  //   plugins: {
-  //     pnpm: pluginPnpm,
-  //   },
-  //   rules: {
-  //     'pnpm/yaml-no-unused-catalog-item': 'error',
-  //     'pnpm/yaml-no-duplicate-catalog-item': 'error',
-  //     'pnpm/yaml-valid-packages': 'error',
-  //   },
-  // },
+  {
+    name: 'pnpm/package.json',
+    files: [
+      'package.json',
+      '**/package.json',
+    ],
+    languageOptions: {
+      parser: jsoncParser,
+    },
+    plugins: {
+      pnpm: pluginPnpm,
+    },
+    rules: {
+      'pnpm/json-enforce-catalog': 'error',
+      'pnpm/json-valid-catalog': 'error',
+      'pnpm/json-prefer-workspace-settings': 'error',
+    },
+  },
+  {
+    name: 'pnpm/pnpm-workspace-yaml',
+    files: ['pnpm-workspace.yaml'],
+    languageOptions: {
+      parser: yamlParser,
+    },
+    plugins: {
+      pnpm: pluginPnpm,
+    },
+    rules: {
+      'pnpm/yaml-no-unused-catalog-item': 'error',
+      'pnpm/yaml-no-duplicate-catalog-item': 'error',
+      'pnpm/yaml-valid-packages': 'error',
+    },
+  },
   {
     rules: {
       'e18e/prefer-static-regex': 'off',
