@@ -131,8 +131,9 @@ jobs:
             | jq -r --arg h "$HOSTNAME" '.result[]? | select(.name==$h) | "Custom domain status: \(.status) (validation: \(.validation_data.status // "n/a"))"'
 
   zero-trust:
-    # Configure the access gate after a successful deploy. Idempotent: it
-    # create-or-updates one Access application + one allow policy.
+    # Configure the access gates after a successful deploy. Idempotent:
+    #   - docs.thecodeorigin.com  → allow only *@thecodeorigin.com
+    #   - *.pages.dev (the project's default URL) → deny everyone (disabled)
     needs: deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -197,3 +198,61 @@ jobs:
           fi
 
           echo "Zero Trust Access ensured: $APP_DOMAIN → allow *@${ALLOWED_EMAIL_DOMAIN} only."
+
+      - name: Disable default pages.dev domain (Access deny-all)
+        # The *.pages.dev URL serves the docs WITHOUT the gate above. Put a
+        # deny-everyone Access app in front of the project's pages.dev hostnames
+        # so the docs are only reachable via docs.thecodeorigin.com. Idempotent.
+        env:
+          PAGES_HOST: thecodeorigin-docs.pages.dev
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/access"
+          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H "Content-Type: application/json")
+          name="THECODEORIGIN Docs (pages.dev — disabled)"
+
+          list="$(curl -fsS "${auth[@]}" "${api}/apps?per_page=1000" || echo '{"success":false}')"
+          if [ "$(echo "$list" | jq -r '.success')" != "true" ]; then
+            echo "::warning::Could not list Access apps; skipping pages.dev lockdown."
+            exit 0
+          fi
+          app_id="$(echo "$list" | jq -r --arg n "$name" 'first(.result[]? | select(.name==$n) | .id) // empty')"
+
+          # Prefer covering the wildcard (preview deploys: <hash>.<project>.pages.dev).
+          # Wildcard app domains are plan-gated, so fall back to the canonical host only.
+          payload_wild="$(jq -n --arg name "$name" --arg h "$PAGES_HOST" --arg w "*.$PAGES_HOST" \
+            '{name:$name, type:"self_hosted", domain:$h, self_hosted_domains:[$h,$w], session_duration:"24h", app_launcher_visible:false}')"
+          payload_flat="$(jq -n --arg name "$name" --arg h "$PAGES_HOST" \
+            '{name:$name, type:"self_hosted", domain:$h, self_hosted_domains:[$h], session_duration:"24h", app_launcher_visible:false}')"
+
+          upsert() { # $1 = payload
+            if [ -z "$app_id" ]; then
+              curl -sS "${auth[@]}" -X POST "${api}/apps" --data "$1"
+            else
+              curl -sS "${auth[@]}" -X PUT "${api}/apps/${app_id}" --data "$1"
+            fi
+          }
+
+          resp="$(upsert "$payload_wild")"
+          if [ "$(echo "$resp" | jq -r '.success // false')" != "true" ]; then
+            echo "Wildcard app domain rejected (plan limit?) — preview URLs stay public. Falling back to canonical host."
+            echo "$resp" | jq -c '.errors // empty'
+            resp="$(upsert "$payload_flat")"
+          fi
+          app_id="$(echo "$resp" | jq -r '.result.id // empty')"
+          if [ -z "$app_id" ]; then
+            echo "::warning::Could not create/update the pages.dev block app."
+            echo "$resp" | jq -c '.errors // empty'
+            exit 0
+          fi
+
+          pname="Block everyone"
+          ppayload="$(jq -n --arg name "$pname" '{name:$name, decision:"deny", precedence:1, include:[{everyone:{}}]}')"
+          policies="$(curl -fsS "${auth[@]}" "${api}/apps/${app_id}/policies")"
+          pid="$(echo "$policies" | jq -r --arg n "$pname" 'first(.result[]? | select(.name==$n) | .id) // empty')"
+          if [ -z "$pid" ]; then
+            curl -fsS "${auth[@]}" -X POST "${api}/apps/${app_id}/policies" --data "$ppayload" > /dev/null
+          else
+            curl -fsS "${auth[@]}" -X PUT "${api}/apps/${app_id}/policies/${pid}" --data "$ppayload" > /dev/null
+          fi
+          echo "pages.dev disabled: ${PAGES_HOST} → deny all. Docs are only reachable via docs.thecodeorigin.com."
