@@ -35,7 +35,9 @@ export default defineEventHandler(async (event) => {
     tokens = await exchangeCode(cfg, String(q.code), verifier, callbackRedirectUri(event, cfg))
     userinfoRaw = await fetchUserinfo(cfg, tokens.access_token)
   }
-  catch {
+  catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err)
+    console.error('[auth:callback] exchange failed:', detail)
     return fail('token_exchange_failed')
   }
 
