@@ -39,6 +39,7 @@ export default defineEventHandler(async (event) => {
     entitlement: res.claims.entitlement as never,
     accessToken: res.accessToken,
     refreshToken: null,
+    idToken: null,
     accessExpiresAt: res.expiresAt,
     isImpersonation: true,
     impersonator: { sub: s.rec.user.sub, email: s.rec.user.email, name: s.rec.user.name, picture: s.rec.user.picture },

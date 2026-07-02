@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
   if (!q.code || !q.state || !state || q.state !== state || !verifier)
     return fail('invalid_state')
 
-  let tokens: { access_token: string, refresh_token?: string, expires_in?: number }
+  let tokens: { access_token: string, refresh_token?: string, id_token?: string, expires_in?: number }
   let userinfoRaw: unknown
   try {
     tokens = await exchangeCode(String(q.code), verifier, callbackRedirectUri(event))
@@ -62,6 +62,7 @@ export default defineEventHandler(async (event) => {
     entitlement: u.entitlement,
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token ?? null,
+    idToken: tokens.id_token ?? null,
     accessExpiresAt: Date.now() + (tokens.expires_in ?? 3600) * 1000,
     isImpersonation: false,
     impersonator: null,

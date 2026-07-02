@@ -13,6 +13,7 @@ export interface SessionRecord {
   entitlement: PublicSession['entitlement']
   accessToken: string
   refreshToken: string | null
+  idToken: string | null
   accessExpiresAt: number
   isImpersonation: boolean
   impersonator: { sub: string, email: string, name: string | null, picture: string | null } | null
